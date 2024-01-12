@@ -36,7 +36,7 @@ import (
 )
 
 // Render renders svg data as a RGBA image.
-func Render(data []byte) (image.Image, error) {
+func Render(data []byte) (*image.RGBA, error) {
 	tree, errno := C.parse(data)
 	if errno != nil {
 		return nil, NewParseError(errno)
