@@ -2,7 +2,12 @@
 package resvg
 
 /*
-#cgo LDFLAGS: -Llibresvg -lresvg -lm
+#cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/libresvg/darwin_amd64 -lresvg -lm
+#cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/libresvg/darwin_arm64 -lresvg -lm
+#cgo linux,amd64 LDFLAGS: -L${SRCDIR}/libresvg/linux_amd64 -lresvg -lm
+#cgo linux,arm64 LDFLAGS: -L${SRCDIR}/libresvg/linux_arm64 -lresvg -lm
+#cgo linux,arm LDFLAGS: -L${SRCDIR}/libresvg/linux_arm -lresvg -lm
+#cgo windows,amd64 LDFLAGS: -L${SRCDIR}/libresvg/windows_amd64 -lresvg -lm
 
 #include <errno.h>
 
