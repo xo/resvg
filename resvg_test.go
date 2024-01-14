@@ -2,6 +2,7 @@ package resvg
 
 import (
 	"bytes"
+	"encoding/base64"
 	"image/png"
 	"io/fs"
 	"os"
@@ -60,7 +61,16 @@ func testRender(t *testing.T, name string) {
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	if !bytes.Equal(exp, b) {
-		t.Errorf("expected %s and %s to have same content", orig, out)
+	switch equal := bytes.Equal(b, exp); {
+	case equal:
+		t.Logf("%s and %s match!", orig, out)
+	case os.Getenv("CI") != "":
+		expEncoded := base64.StdEncoding.EncodeToString(exp)
+		bEncoded := base64.StdEncoding.EncodeToString(b)
+		t.Logf("WARNING: expected %s and %s to be equal!", orig, out)
+		t.Logf("%s (expected):\n%s", orig, expEncoded)
+		t.Logf("%s:\n%s", out, bEncoded)
+	default:
+		t.Errorf("expected %s and %s to be equal!", orig, out)
 	}
 }
