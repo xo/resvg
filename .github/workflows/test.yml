@@ -1,0 +1,38 @@
+name: Test
+on: [push, pull_request]
+jobs:
+  test_for_linux:
+    name: Test for Linux
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v4
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Test
+      run: |
+        CGO_ENABLED=1 go test -v -x
+
+  test_for_macos:
+    name: Test for macOS
+    runs-on: macos-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v4
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Test
+      run: |
+        CGO_ENABLED=1 go test -v -x
+
+  test_for_windows:
+    name: Test for Windows
+    runs-on: windows-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v4
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Test
+      run: |
+        CGO_ENABLED=1 go test -ldflags '-extldflags "-static"' -v -x
