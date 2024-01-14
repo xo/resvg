@@ -11,7 +11,7 @@ jobs:
       uses: actions/checkout@v3
     - name: Test
       run: |
-        CGO_ENABLED=1 go test -v -x
+        go test -v -x
 
   test_for_macos:
     name: Test for macOS
@@ -23,7 +23,7 @@ jobs:
       uses: actions/checkout@v3
     - name: Test
       run: |
-        CGO_ENABLED=1 go test -v -x
+        go test -v -x
 
   test_for_windows:
     name: Test for Windows
@@ -35,4 +35,4 @@ jobs:
       uses: actions/checkout@v3
     - name: Test
       run: |
-        CGO_ENABLED=1 go test -ldflags '-extldflags "-static"' -v -x
+        go test -v -x -ldflags '-extldflags "-static"'
