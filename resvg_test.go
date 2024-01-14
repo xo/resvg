@@ -49,9 +49,18 @@ func testRender(t *testing.T, name string) {
 	if err := png.Encode(buf, img); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
+	b := buf.Bytes()
 	out := name + ".png"
 	t.Logf("writing to: %s", out)
-	if err := os.WriteFile(out, buf.Bytes(), 0o644); err != nil {
+	if err := os.WriteFile(out, b, 0o644); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
+	}
+	orig := name + ".orig.png"
+	exp, err := os.ReadFile(orig)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if !bytes.Equal(exp, b) {
+		t.Errorf("expected %s and %s to have same content", orig, out)
 	}
 }
