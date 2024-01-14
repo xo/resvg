@@ -2,6 +2,7 @@
 package resvg
 
 /*
+#cgo CFLAGS: -I${SRCDIR}/libresvg
 #cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/libresvg/darwin_amd64 -lresvg -lm
 #cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/libresvg/darwin_arm64 -lresvg -lm
 #cgo linux,amd64 LDFLAGS: -L${SRCDIR}/libresvg/linux_amd64 -lresvg -lm
@@ -10,8 +11,7 @@ package resvg
 #cgo windows,amd64 LDFLAGS: -L${SRCDIR}/libresvg/windows_amd64 -lresvg -lm
 
 #include <errno.h>
-
-#include "libresvg/resvg.h"
+#include "resvg.h"
 
 resvg_render_tree* parse(_GoBytes_ data) {
 	// create options
