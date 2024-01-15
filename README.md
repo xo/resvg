@@ -3,11 +3,11 @@
 `resvg` is a wrapper around [rust's resvg c-api crate][resvg], used by
 [`usql`][usql] to render SVGs. Useful for rendering SVGs.
 
-[Overview][] | [Quickstart][] | [Examples][] | [Schemes][] | [Installing][] | [Using][] | [About][]
+[Overview][] | [Building Artifacts][] | [TODO][] | [About][]
 
 [Overview]: #overview "Overview"
-[Installing]: #installing "Installing"
-[Using]: #using "Using"
+[Building Artifacts]: #building-artifacts "Building Artifacts"
+[TODO]: #todo "TODO"
 [About]: #about "About"
 
 [![Unit Tests][resvg-ci-status]][resvg-ci]
