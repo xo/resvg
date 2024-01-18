@@ -7,7 +7,16 @@ SRC=$(realpath $(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd))
 
 set -e
 
-WORKDIR=$HOME/src/vega
+WORKDIR=$HOME/src/charts
+
+BUILD_TARGETS=""
+
+OPTIND=1
+while getopts "t:" opt; do
+case "$opt" in
+  t) BUILD_TARGETS="$OPTARG" ;;
+esac
+done
 
 mkdir -p $WORKDIR
 
@@ -38,13 +47,26 @@ git_checkout_reset() {
 git_checkout_reset resvg "https://github.com/${REPO}.git"
 
 declare -A TARGETS=(
+  [darwin_amd64]=x86_64-apple-darwin
   [darwin_arm64]=aarch64-apple-darwin
-#  [darwin_amd64]=x86_64-apple-darwin
-#  [linux_amd64]=x86_64-unknown-linux-gnu
-#  [linux_arm64]=aarch64-unknown-linux-gnu
-#  [linux_arm]=armv7-unknown-linux-gnueabihf
-#  [windows_amd64]=x86_64-pc-windows-gnu
+  [freebsd_amd64]=x86_64-unknown-freebsd
+  [linux_amd64]=x86_64-unknown-linux-gnu
+  [linux_arm64]=aarch64-unknown-linux-gnu
+  [linux_arm]=armv7-unknown-linux-gnueabihf
+  [netbsd_amd64]=x86_64-unknown-netbsd
+  [solaris_amd64]=x86_64-sun-solaris
+  [windows_amd64]=x86_64-pc-windows-gnu
+  [windows_arm64]=aarch64-pc-windows-msvc
 )
+
+#[openbsd_amd64]=
+#[dragonfly_amd64]=
+
+if [ -z "$BUILD_TARGETS" ]; then
+  BUILD_TARGETS="${!TARGETS[@]}"
+fi
+
+BUILD_TARGETS=$(sed -e 's/\s\+/\n/g' <<< "$BUILD_TARGETS" | sort -i |tr '\n' ' ')
 
 for f in $(find $WORKDIR/resvg -type f -name Cargo.toml); do
   cat > $(dirname "$f")/Cross.toml << __END__
@@ -57,12 +79,18 @@ __END__
 done
 
 pushd $WORKDIR/resvg/crates/c-api &> /dev/null
-for TARGET in "${!TARGETS[@]}"; do
+for TARGET in $BUILD_TARGETS; do
   DEST=$SRC/libresvg/$TARGET
   mkdir -p $DEST
   RUST_TARGET="${TARGETS[$TARGET]}"
-  (set -x;
+  if [ -z "$(rustup target list|grep "$RUST_TARGET"|grep installed)" ]; then
+    (set -x;
+      rustup target add $RUST_TARGET
+    )
+  fi
+  (
     export "CARGO_TARGET_$(sed -e 's/-/_/g' <<< "$RUST_TARGET"|tr [:lower:] [:upper:])_RUSTFLAGS"="--print=native-static-libs"
+    set -x
     cross build \
       --verbose \
       --release \
