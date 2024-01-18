@@ -146,7 +146,7 @@ func (r *Resvg) buildOpts() *C.resvg_options {
 	}
 	for _, font := range r.Fonts {
 		s := C.CString(string(font))
-		C.resvg_options_load_font_data(opts, s, C.ulong(len(font)))
+		C.resvg_options_load_font_data(opts, s, C.uintptr_t(len(font)))
 		C.free(unsafe.Pointer(s))
 	}
 	for _, fontFile := range r.FontFiles {
