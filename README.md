@@ -101,7 +101,7 @@ $ RUSTFLAGS="--print=native-static-libs" cargo build --release
 
 ## TODO
 
-- Expand API to support the avaliable `resvg_options`
+- Rewrite as pure Go
 
 ## About
 
