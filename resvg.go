@@ -13,8 +13,16 @@ package resvg
 #cgo windows,amd64 LDFLAGS: -L${SRCDIR}/libresvg/windows_amd64 -lresvg -lm -lkernel32 -ladvapi32 -lbcrypt -lntdll -luserenv -lws2_32
 
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
+
 #include "resvg.h"
+
+char* version() {
+	char* s = malloc(sizeof(RESVG_VERSION));
+	strncpy(s, RESVG_VERSION, sizeof(RESVG_VERSION));
+	return s;
+}
 
 resvg_render_tree* parse(_GoBytes_ data, resvg_options* opts) {
 	// parse
@@ -45,6 +53,14 @@ import (
 // Render renders svg data as a RGBA image.
 func Render(data []byte, opts ...Option) (*image.RGBA, error) {
 	return New(opts...).Render(data)
+}
+
+// Version returns the resvg version.
+func Version() string {
+	v := C.version()
+	ver := C.GoString(v)
+	C.free(unsafe.Pointer(v))
+	return ver
 }
 
 // Resvg wraps the [resvg c-api].

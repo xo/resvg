@@ -84,6 +84,38 @@ built Go binary, or in the Windows system path.
 
 Notes for building the `libresvg` artifacts:
 
+### Using gen.sh
+
+Build Darwin images:
+
+```sh
+# get cross
+$ git clone https://github.com/cross-rs/cross.git
+$ cd cross && git submodule update --init --remote
+
+# grab sdk
+$ cd cross/docker/cross-toolchains/docker
+$ export SDK='https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz'
+$ curl -O -J -L "$SDK"
+
+# build containers
+$ cd cross
+$ cargo build-docker-image x86_64-apple-darwin-cross --build-arg "MACOS_SDK_FILE='$(basename $SDK)'"
+$ cargo build-docker-image aarch64-apple-darwin-cross --build-arg "MACOS_SDK_FILE='$(basename $SDK)'"
+
+# add rust toolchains
+$ rustup target add x86_64-apple-darwin
+$ rustup target add aarch64-apple-darwin
+```
+
+Then use:
+
+```sh
+$ ./gen.sh
+```
+
+### Manually
+
 ```sh
 $ mkdir -p libresvg/$(go env GOOS)_$(go env GOARCH)
 $ git clone https://github.com/RazrFalcon/resvg.git && cd resvg/crates/c-api
@@ -98,6 +130,8 @@ To get the needed static dependencies (for Windows or other platforms):
 $ cd resvg/crates/c-api
 $ RUSTFLAGS="--print=native-static-libs" cargo build --release
 ```
+
+Use
 
 ## TODO
 

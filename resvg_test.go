@@ -2,6 +2,7 @@ package resvg
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/base64"
 	"image/png"
 	"io/fs"
@@ -10,6 +11,14 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestVersion(t *testing.T) {
+	ver := Version()
+	if v, exp := cleanString(ver), cleanString(string(versionTxt)); v != exp {
+		t.Fatalf("expected %s, got: %s", exp, v)
+	}
+	t.Logf("resvg: %s", ver)
+}
 
 func TestRender(t *testing.T) {
 	var files []string
@@ -74,3 +83,12 @@ func testRender(t *testing.T, name string) {
 		t.Errorf("expected %s and %s to be equal!", orig, out)
 	}
 }
+
+func cleanString(s string) string {
+	return strings.TrimPrefix(strings.TrimSpace(s), "v")
+}
+
+// versionTxt is the embedded resvg version.
+//
+//go:embed version.txt
+var versionTxt []byte
