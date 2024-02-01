@@ -84,6 +84,7 @@ type Resvg struct {
 	ImageRendering  ImageRendering
 	Fonts           [][]byte
 	FontFiles       []string
+	Background      color.Color
 }
 
 // New creates a new resvg.
@@ -93,6 +94,7 @@ func New(opts ...Option) *Resvg {
 		ShapeRendering:  ShapeRenderingNotSet,
 		TextRendering:   TextRenderingNotSet,
 		ImageRendering:  ImageRenderingNotSet,
+		Background:      color.Transparent,
 	}
 	for _, o := range opts {
 		o(r)
@@ -189,7 +191,7 @@ func (r *Resvg) Render(data []byte) (*image.RGBA, error) {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 	for i := 0; i < width; i++ {
 		for j := 0; j < height; j++ {
-			img.Set(i, j, color.Transparent)
+			img.Set(i, j, r.Background)
 		}
 	}
 	// render
@@ -371,5 +373,12 @@ func WithFonts(fonts ...[]byte) Option {
 func WithFontFiles(fontFiles ...string) Option {
 	return func(r *Resvg) {
 		r.FontFiles = fontFiles
+	}
+}
+
+// WithBackground is a resvg option to set the fill background color.
+func WithBackground(background color.Color) Option {
+	return func(r *Resvg) {
+		r.Background = background
 	}
 }
