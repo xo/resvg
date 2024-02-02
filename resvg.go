@@ -29,7 +29,6 @@ resvg_render_tree* parse(_GoBytes_ data, resvg_options* opts) {
 	// parse
 	resvg_render_tree* tree;
 	errno = resvg_parse_tree_from_data(data.p, data.n, opts, &tree);
-	resvg_options_destroy(opts);
 	if (errno != 0) {
 		return 0;
 	}
@@ -43,9 +42,12 @@ void render(resvg_render_tree* tree, int width, int height, _GoBytes_ buf) {
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
+	"io"
+	"runtime"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -68,119 +70,156 @@ func Version() string {
 //
 // [resvg c-api]: https://github.com/RazrFalcon/resvg
 type Resvg struct {
-	LoadSystemFonts bool
-	ResourcesDir    string
-	DPI             float32
-	FontFamily      string
-	FontSize        float32
-	SerifFamily     string
-	SansSerifFamily string
-	CursiveFamily   string
-	FantasyFamily   string
-	MonospaceFamily string
-	Languages       []string
-	ShapeRendering  ShapeRendering
-	TextRendering   TextRendering
-	ImageRendering  ImageRendering
-	Fonts           [][]byte
-	FontFiles       []string
-	Background      color.Color
+	loadSystemFonts bool
+	resourcesDir    string
+	dp              float32
+	fontFamily      string
+	fontSize        float32
+	serifFamily     string
+	sansSerifFamily string
+	cursiveFamily   string
+	fantasyFamily   string
+	monospaceFamily string
+	languages       []string
+	shapeRendering  ShapeRendering
+	textRendering   TextRendering
+	imageRendering  ImageRendering
+	fonts           [][]byte
+	fontFiles       []string
+	background      color.Color
+
+	opts *C.resvg_options
 }
 
 // New creates a new resvg.
 func New(opts ...Option) *Resvg {
 	r := &Resvg{
-		LoadSystemFonts: true,
-		ShapeRendering:  ShapeRenderingNotSet,
-		TextRendering:   TextRenderingNotSet,
-		ImageRendering:  ImageRenderingNotSet,
-		Background:      color.Transparent,
+		loadSystemFonts: true,
+		shapeRendering:  ShapeRenderingNotSet,
+		textRendering:   TextRenderingNotSet,
+		imageRendering:  ImageRenderingNotSet,
+		background:      color.Transparent,
 	}
 	for _, o := range opts {
 		o(r)
 	}
+	r.buildOpts()
+	runtime.SetFinalizer(r, (*Resvg).finalize)
 	return r
 }
 
 // buildOpts builds the resvg options.
-func (r *Resvg) buildOpts() *C.resvg_options {
+func (r *Resvg) buildOpts() {
 	opts := C.resvg_options_create()
-	if r.LoadSystemFonts {
+	if r.loadSystemFonts {
 		C.resvg_options_load_system_fonts(opts)
 	}
-	if r.ResourcesDir != "" {
-		s := C.CString(r.ResourcesDir)
+	if r.resourcesDir != "" {
+		s := C.CString(r.resourcesDir)
 		C.resvg_options_set_resources_dir(opts, s)
 		C.free(unsafe.Pointer(s))
 	}
-	if r.DPI != 0.0 {
-		C.resvg_options_set_dpi(opts, C.float(r.DPI))
+	if r.dp != 0.0 {
+		C.resvg_options_set_dpi(opts, C.float(r.dp))
 	}
-	if r.FontFamily != "" {
-		s := C.CString(r.FontFamily)
+	if r.fontFamily != "" {
+		s := C.CString(r.fontFamily)
 		C.resvg_options_set_font_family(opts, s)
 		C.free(unsafe.Pointer(s))
 	}
-	if r.FontSize != 0.0 {
-		C.resvg_options_set_font_size(opts, C.float(r.FontSize))
+	if r.fontSize != 0.0 {
+		C.resvg_options_set_font_size(opts, C.float(r.fontSize))
 	}
-	if r.SerifFamily != "" {
-		s := C.CString(r.SerifFamily)
+	if r.serifFamily != "" {
+		s := C.CString(r.serifFamily)
 		C.resvg_options_set_serif_family(opts, s)
 		C.free(unsafe.Pointer(s))
 	}
-	if r.SansSerifFamily != "" {
-		s := C.CString(r.SansSerifFamily)
+	if r.sansSerifFamily != "" {
+		s := C.CString(r.sansSerifFamily)
 		C.resvg_options_set_sans_serif_family(opts, s)
 		C.free(unsafe.Pointer(s))
 	}
-	if r.CursiveFamily != "" {
-		s := C.CString(r.CursiveFamily)
+	if r.cursiveFamily != "" {
+		s := C.CString(r.cursiveFamily)
 		C.resvg_options_set_cursive_family(opts, s)
 		C.free(unsafe.Pointer(s))
 	}
-	if r.FantasyFamily != "" {
-		s := C.CString(r.FantasyFamily)
+	if r.fantasyFamily != "" {
+		s := C.CString(r.fantasyFamily)
 		C.resvg_options_set_fantasy_family(opts, s)
 		C.free(unsafe.Pointer(s))
 	}
-	if r.MonospaceFamily != "" {
-		s := C.CString(r.MonospaceFamily)
+	if r.monospaceFamily != "" {
+		s := C.CString(r.monospaceFamily)
 		C.resvg_options_set_monospace_family(opts, s)
 		C.free(unsafe.Pointer(s))
 	}
-	if len(r.Languages) != 0 {
-		s := C.CString(strings.Join(r.Languages, ","))
+	if len(r.languages) != 0 {
+		s := C.CString(strings.Join(r.languages, ","))
 		C.resvg_options_set_languages(opts, s)
 		C.free(unsafe.Pointer(s))
 	}
-	if r.ShapeRendering != ShapeRenderingNotSet {
-		C.resvg_options_set_shape_rendering_mode(opts, C.resvg_shape_rendering(r.ShapeRendering))
+	if r.shapeRendering != ShapeRenderingNotSet {
+		C.resvg_options_set_shape_rendering_mode(opts, C.resvg_shape_rendering(r.shapeRendering))
 	}
-	if r.TextRendering != TextRenderingNotSet {
-		C.resvg_options_set_text_rendering_mode(opts, C.resvg_text_rendering(r.TextRendering))
+	if r.textRendering != TextRenderingNotSet {
+		C.resvg_options_set_text_rendering_mode(opts, C.resvg_text_rendering(r.textRendering))
 	}
-	if r.ImageRendering != ImageRenderingNotSet {
-		C.resvg_options_set_image_rendering_mode(opts, C.resvg_image_rendering(r.ImageRendering))
+	if r.imageRendering != ImageRenderingNotSet {
+		C.resvg_options_set_image_rendering_mode(opts, C.resvg_image_rendering(r.imageRendering))
 	}
-	for _, font := range r.Fonts {
+	for _, font := range r.fonts {
 		s := C.CString(string(font))
 		C.resvg_options_load_font_data(opts, s, C.uintptr_t(len(font)))
 		C.free(unsafe.Pointer(s))
 	}
-	for _, fontFile := range r.FontFiles {
+	for _, fontFile := range r.fontFiles {
 		if fontFile != "" {
 			s := C.CString(fontFile)
 			C.resvg_options_load_font_file(opts, s)
 			C.free(unsafe.Pointer(s))
 		}
 	}
-	return opts
+	r.opts = opts
+}
+
+// finalize finalizes the C allocations.
+func (r *Resvg) finalize() {
+	if r.opts != nil {
+		C.resvg_options_destroy(r.opts)
+	}
+	r.opts = nil
+	runtime.SetFinalizer(r, nil)
+}
+
+// ParseConfig parses the svg, returning an image config.
+func (r *Resvg) ParseConfig(data []byte) (image.Config, error) {
+	if r.opts == nil {
+		return image.Config{}, errors.New("options not initialized")
+	}
+	tree, errno := C.parse(data, r.opts)
+	if errno != nil {
+		return image.Config{}, NewParseError(errno)
+	}
+	// height/width
+	size := C.resvg_get_image_size(tree)
+	width, height := int(size.width), int(size.height)
+	// destroy
+	C.resvg_tree_destroy(tree)
+	return image.Config{
+		ColorModel: color.RGBAModel,
+		Width:      width,
+		Height:     height,
+	}, nil
 }
 
 // Render renders svg data as a RGBA image.
 func (r *Resvg) Render(data []byte) (*image.RGBA, error) {
-	tree, errno := C.parse(data, r.buildOpts())
+	if r.opts == nil {
+		return nil, errors.New("options not initialized")
+	}
+	tree, errno := C.parse(data, r.opts)
 	if errno != nil {
 		return nil, NewParseError(errno)
 	}
@@ -191,7 +230,7 @@ func (r *Resvg) Render(data []byte) (*image.RGBA, error) {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 	for i := 0; i < width; i++ {
 		for j := 0; j < height; j++ {
-			img.Set(i, j, r.Background)
+			img.Set(i, j, r.background)
 		}
 	}
 	// render
@@ -274,111 +313,141 @@ type Option func(*Resvg)
 // WithLoadSystemFonts is a resvg option to load system fonts.
 func WithLoadSystemFonts(loadSystemFonts bool) Option {
 	return func(r *Resvg) {
-		r.LoadSystemFonts = loadSystemFonts
+		r.loadSystemFonts = loadSystemFonts
 	}
 }
 
 // WithResourcesDir is a resvg option to set the resources dir.
 func WithResourcesDir(resourcesDir string) Option {
 	return func(r *Resvg) {
-		r.ResourcesDir = resourcesDir
+		r.resourcesDir = resourcesDir
 	}
 }
 
 // WithDPI is a resvg option to set the DPI.
 func WithDPI(dpi float32) Option {
 	return func(r *Resvg) {
-		r.DPI = dpi
+		r.dp = dpi
 	}
 }
 
 // WithFontFamily is a resvg option to set the font family.
 func WithFontFamily(fontFamily string) Option {
 	return func(r *Resvg) {
-		r.FontFamily = fontFamily
+		r.fontFamily = fontFamily
 	}
 }
 
 // WithFontSize is a resvg option to set the font size.
 func WithFontSize(fontSize float32) Option {
 	return func(r *Resvg) {
-		r.FontSize = fontSize
+		r.fontSize = fontSize
 	}
 }
 
 // WithSerifFamily is a resvg option to set the serif family.
 func WithSerifFamily(serifFamily string) Option {
 	return func(r *Resvg) {
-		r.SerifFamily = serifFamily
+		r.serifFamily = serifFamily
 	}
 }
 
 // WithCursiveFamily is a resvg option to set the cursive family.
 func WithCursiveFamily(cursiveFamily string) Option {
 	return func(r *Resvg) {
-		r.CursiveFamily = cursiveFamily
+		r.cursiveFamily = cursiveFamily
 	}
 }
 
 // WithFantasyFamily is a resvg option to set the fantasy family.
 func WithFantasyFamily(fantasyFamily string) Option {
 	return func(r *Resvg) {
-		r.FantasyFamily = fantasyFamily
+		r.fantasyFamily = fantasyFamily
 	}
 }
 
 // WithMonospaceFamily is a resvg option to set the monospace family.
 func WithMonospaceFamily(monospaceFamily string) Option {
 	return func(r *Resvg) {
-		r.MonospaceFamily = monospaceFamily
+		r.monospaceFamily = monospaceFamily
 	}
 }
 
 // WithLanguages is a resvg option to set the languages.
 func WithLanguages(languages ...string) Option {
 	return func(r *Resvg) {
-		r.Languages = languages
+		r.languages = languages
 	}
 }
 
 // WithShapeRendering is a resvg option to set the shape rendering mode.
 func WithShapeRendering(shapeRendering ShapeRendering) Option {
 	return func(r *Resvg) {
-		r.ShapeRendering = shapeRendering
+		r.shapeRendering = shapeRendering
 	}
 }
 
 // WithTextRendering is a resvg option to set the text rendering mode.
 func WithTextRendering(textRendering TextRendering) Option {
 	return func(r *Resvg) {
-		r.TextRendering = textRendering
+		r.textRendering = textRendering
 	}
 }
 
 // WithImageRendering is a resvg option to set the image rendering mode.
 func WithImageRendering(imageRendering ImageRendering) Option {
 	return func(r *Resvg) {
-		r.ImageRendering = imageRendering
+		r.imageRendering = imageRendering
 	}
 }
 
 // WithFonts is a resvg option to set font data.
 func WithFonts(fonts ...[]byte) Option {
 	return func(r *Resvg) {
-		r.Fonts = fonts
+		r.fonts = fonts
 	}
 }
 
 // WithFontFiles is a resvg option to set font files.
 func WithFontFiles(fontFiles ...string) Option {
 	return func(r *Resvg) {
-		r.FontFiles = fontFiles
+		r.fontFiles = fontFiles
 	}
 }
 
 // WithBackground is a resvg option to set the fill background color.
 func WithBackground(background color.Color) Option {
 	return func(r *Resvg) {
-		r.Background = background
+		r.background = background
 	}
+}
+
+// Default is the default renderer.
+var Default = New()
+
+func init() {
+	image.RegisterFormat("svg", `<?xml`, Decode, DecodeConfig)
+	image.RegisterFormat("svg", "<svg", Decode, DecodeConfig)
+}
+
+// Decode decodes a svg from the reader.
+func Decode(r io.Reader) (image.Image, error) {
+	buf, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	img, err := Default.Render(buf)
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
+}
+
+// DecodeConfig decodes a svg config from the reader.
+func DecodeConfig(r io.Reader) (image.Config, error) {
+	buf, err := io.ReadAll(r)
+	if err != nil {
+		return image.Config{}, err
+	}
+	return Default.ParseConfig(buf)
 }

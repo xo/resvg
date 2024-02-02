@@ -3,6 +3,8 @@ package resvg_test
 import (
 	"bytes"
 	"fmt"
+	"image"
+	"image/color"
 	"image/png"
 	"log"
 	"os"
@@ -11,7 +13,7 @@ import (
 )
 
 func Example() {
-	img, err := resvg.Render(svgData)
+	img, _, err := image.Decode(bytes.NewReader(svgData))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -22,6 +24,42 @@ func Example() {
 		log.Fatal(err)
 	}
 	if err := os.WriteFile("rect.png", buf.Bytes(), 0o644); err != nil {
+		log.Fatal(err)
+	}
+	// Output:
+	// width: 400 height: 180
+}
+
+func Example_render() {
+	img, err := resvg.Render(svgData)
+	if err != nil {
+		log.Fatal(err)
+	}
+	b := img.Bounds()
+	fmt.Printf("width: %d height: %d", b.Max.X, b.Max.Y)
+	buf := new(bytes.Buffer)
+	if err := png.Encode(buf, img); err != nil {
+		log.Fatal(err)
+	}
+	if err := os.WriteFile("rect_render.png", buf.Bytes(), 0o644); err != nil {
+		log.Fatal(err)
+	}
+	// Output:
+	// width: 400 height: 180
+}
+
+func Example_background() {
+	img, err := resvg.Render(svgData, resvg.WithBackground(color.White))
+	if err != nil {
+		log.Fatal(err)
+	}
+	b := img.Bounds()
+	fmt.Printf("width: %d height: %d", b.Max.X, b.Max.Y)
+	buf := new(bytes.Buffer)
+	if err := png.Encode(buf, img); err != nil {
+		log.Fatal(err)
+	}
+	if err := os.WriteFile("rect_white.png", buf.Bytes(), 0o644); err != nil {
 		log.Fatal(err)
 	}
 	// Output:
