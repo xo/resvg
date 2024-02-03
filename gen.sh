@@ -49,18 +49,18 @@ git_checkout_reset resvg "https://github.com/${REPO}.git"
 declare -A TARGETS=(
   [darwin_amd64]=x86_64-apple-darwin
   [darwin_arm64]=aarch64-apple-darwin
-  [freebsd_amd64]=x86_64-unknown-freebsd
   [linux_amd64]=x86_64-unknown-linux-gnu
   [linux_arm64]=aarch64-unknown-linux-gnu
   [linux_arm]=armv7-unknown-linux-gnueabihf
-  [netbsd_amd64]=x86_64-unknown-netbsd
   [solaris_amd64]=x86_64-sun-solaris
   [windows_amd64]=x86_64-pc-windows-gnu
-  [windows_arm64]=aarch64-pc-windows-msvc
 )
 
-#[openbsd_amd64]=
 #[dragonfly_amd64]=
+#[freebsd_amd64]=x86_64-unknown-freebsd
+#[netbsd_amd64]=x86_64-unknown-netbsd
+#[openbsd_amd64]=
+#[windows_arm64]=aarch64-pc-windows-msvc
 
 if [ -z "$BUILD_TARGETS" ]; then
   BUILD_TARGETS="${!TARGETS[@]}"
