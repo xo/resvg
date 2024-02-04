@@ -53,20 +53,7 @@ import (
 	"unsafe"
 )
 
-// Render renders svg data as a RGBA image.
-func Render(data []byte, opts ...Option) (*image.RGBA, error) {
-	return New(opts...).Render(data)
-}
-
-// Version returns the resvg version.
-func Version() string {
-	v := C.version()
-	ver := C.GoString(v)
-	C.free(unsafe.Pointer(v))
-	return ver
-}
-
-// Resvg wraps the [resvg c-api].
+// Resvg wraps the [resvg c-api] to render svgs as standard a [image.RGBA].
 //
 // [resvg c-api]: https://github.com/RazrFalcon/resvg
 type Resvg struct {
@@ -428,6 +415,19 @@ var Default = New()
 func init() {
 	image.RegisterFormat("svg", `<?xml`, Decode, DecodeConfig)
 	image.RegisterFormat("svg", "<svg", Decode, DecodeConfig)
+}
+
+// Render renders svg data as a RGBA image.
+func Render(data []byte, opts ...Option) (*image.RGBA, error) {
+	return New(opts...).Render(data)
+}
+
+// Version returns the resvg version.
+func Version() string {
+	v := C.version()
+	ver := C.GoString(v)
+	C.free(unsafe.Pointer(v))
+	return ver
 }
 
 // Decode decodes a svg from the reader.
