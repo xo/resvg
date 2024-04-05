@@ -52,7 +52,6 @@ declare -A TARGETS=(
   [linux_amd64]=x86_64-unknown-linux-gnu
   [linux_arm64]=aarch64-unknown-linux-gnu
   [linux_arm]=armv7-unknown-linux-gnueabihf
-  [solaris_amd64]=x86_64-sun-solaris
   [windows_amd64]=x86_64-pc-windows-gnu
 )
 
@@ -60,6 +59,7 @@ declare -A TARGETS=(
 #[freebsd_amd64]=x86_64-unknown-freebsd
 #[netbsd_amd64]=x86_64-unknown-netbsd
 #[openbsd_amd64]=
+#[solaris_amd64]=x86_64-pc-solaris
 #[windows_arm64]=aarch64-pc-windows-msvc
 
 if [ -z "$BUILD_TARGETS" ]; then
@@ -78,8 +78,14 @@ image = "ghcr.io/cross-rs/aarch64-apple-darwin-cross:local"
 __END__
 done
 
+mkdir -p $SRC/libresvg
+(set -x;
+  cp $WORKDIR/resvg/crates/c-api/resvg.h $SRC/libresvg
+)
+
 pushd $WORKDIR/resvg/crates/c-api &> /dev/null
 for TARGET in $BUILD_TARGETS; do
+  echo -e "\n\nBUILDING $TARGET"
   DEST=$SRC/libresvg/$TARGET
   mkdir -p $DEST
   RUST_TARGET="${TARGETS[$TARGET]}"
