@@ -34,8 +34,8 @@ resvg_render_tree* parse(_GoBytes_ data, resvg_options* opts) {
 	return tree;
 }
 
-void render(resvg_render_tree* tree, int width, int height, _GoBytes_ buf) {
-	resvg_render(tree, resvg_transform_identity(), width, height, buf.p);
+void render(resvg_render_tree* tree, int width, int height, resvg_transform ts, _GoBytes_ buf) {
+	resvg_render(tree, ts, width, height, buf.p);
 }
 */
 import "C"
@@ -46,8 +46,10 @@ import (
 	"image"
 	"image/color"
 	"io"
+	"math"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"unsafe"
 )
@@ -73,8 +75,12 @@ type Resvg struct {
 	fonts           [][]byte
 	fontFiles       []string
 	background      color.Color
-
-	opts *C.resvg_options
+	width           int
+	height          int
+	bestFit         bool
+	transform       []float64
+	opts            *C.resvg_options
+	once            sync.Once
 }
 
 // New creates a new resvg.
@@ -89,7 +95,6 @@ func New(opts ...Option) *Resvg {
 	for _, o := range opts {
 		o(r)
 	}
-	r.buildOpts()
 	runtime.SetFinalizer(r, (*Resvg).finalize)
 	return r
 }
@@ -181,6 +186,7 @@ func (r *Resvg) finalize() {
 
 // ParseConfig parses the svg, returning an image config.
 func (r *Resvg) ParseConfig(data []byte) (image.Config, error) {
+	r.once.Do(r.buildOpts)
 	if r.opts == nil {
 		return image.Config{}, errors.New("options not initialized")
 	}
@@ -202,6 +208,7 @@ func (r *Resvg) ParseConfig(data []byte) (image.Config, error) {
 
 // Render renders svg data as a RGBA image.
 func (r *Resvg) Render(data []byte) (*image.RGBA, error) {
+	r.once.Do(r.buildOpts)
 	if r.opts == nil {
 		return nil, errors.New("options not initialized")
 	}
@@ -209,21 +216,68 @@ func (r *Resvg) Render(data []byte) (*image.RGBA, error) {
 	if errno != nil {
 		return nil, NewParseError(errno)
 	}
-	// height/width
+	// determine height, width, scaleX, scaleY
 	size := C.resvg_get_image_size(tree)
-	width, height := int(size.width), int(size.height)
-	// create
+	if size.width == 0 || size.height == 0 {
+		return nil, errors.New("invalid width or height")
+	}
+	width, height, scaleX, scaleY := r.calc(int(size.width), int(size.height))
+	switch {
+	case width == 0:
+		return nil, errors.New("invalid width")
+	case height == 0:
+		return nil, errors.New("invalid height")
+	case scaleX == 0.0:
+		return nil, errors.New("invalid x scale")
+	case scaleY == 0.0:
+		return nil, errors.New("invalid y scale")
+	}
+	// build transform
+	ts := C.resvg_transform_identity()
+	if r.transform != nil {
+		ts.a = C.float(r.transform[0])
+		ts.b = C.float(r.transform[1])
+		ts.c = C.float(r.transform[2])
+		ts.d = C.float(r.transform[3])
+		ts.e = C.float(r.transform[4])
+		ts.f = C.float(r.transform[5])
+	} else {
+		ts.a, ts.d = C.float(scaleX), C.float(scaleY)
+	}
+	c := color.RGBAModel.Convert(r.background).(color.RGBA)
+	// build out
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 	for i := 0; i < width; i++ {
 		for j := 0; j < height; j++ {
-			img.Set(i, j, r.background)
+			img.SetRGBA(i, j, c)
 		}
 	}
 	// render
-	C.render(tree, C.int(width), C.int(height), img.Pix)
+	C.render(tree, C.int(width), C.int(height), ts, img.Pix)
 	// destroy
 	C.resvg_tree_destroy(tree)
 	return img, nil
+}
+
+// calc determines the width/height and scales in the x/y direction to use.
+func (r *Resvg) calc(width, height int) (int, int, float32, float32) {
+	hasWidth, hasHeight := r.width != 0, r.height != 0
+	switch {
+	case hasWidth && hasHeight:
+		return r.width, r.height, float32(r.width) / float32(width), float32(r.height) / float32(height)
+	case !r.bestFit && hasWidth:
+		return r.width, height, float32(r.width) / float32(width), 1.0
+	case !r.bestFit && hasHeight:
+		return width, r.height, 1.0, float32(r.height) / float32(height)
+	case !r.bestFit:
+		return width, height, 1.0, 1.0
+	}
+	if hasWidth {
+		scaleX := float32(r.width) / float32(width)
+		return r.width, int(math.Round(float64(float32(height) * scaleX))), scaleX, scaleX
+	}
+	scaleY := float32(r.height) / float32(height)
+	return int(math.Round(float64(float32(width) * scaleY))), r.height, scaleY, scaleY
 }
 
 // ShapeRendering is the shape rendering mode.
@@ -405,6 +459,34 @@ func WithFontFiles(fontFiles ...string) Option {
 func WithBackground(background color.Color) Option {
 	return func(r *Resvg) {
 		r.background = background
+	}
+}
+
+// WithWidth is a resvg option to set the width.
+func WithWidth(width int) Option {
+	return func(r *Resvg) {
+		r.width = width
+	}
+}
+
+// WithHeight is a resvg option to set the height.
+func WithHeight(height int) Option {
+	return func(r *Resvg) {
+		r.height = height
+	}
+}
+
+// WithBestFit is a resvg option to set best fit.
+func WithBestFit(bestFit bool) Option {
+	return func(r *Resvg) {
+		r.bestFit = bestFit
+	}
+}
+
+// WithTransform is a resvg option to set the transform used.
+func WithTransform(a, b, c, d, e, f float64) Option {
+	return func(r *Resvg) {
+		r.transform = []float64{a, b, c, d, e, f}
 	}
 }
 

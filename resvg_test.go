@@ -35,8 +35,7 @@ func TestRender(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	for _, nn := range files {
-		name := nn
+	for _, name := range files {
 		t.Run(strings.TrimSuffix(filepath.Base(name), ".svg"), func(t *testing.T) {
 			testRender(t, name)
 		})
@@ -49,7 +48,11 @@ func testRender(t *testing.T, name string) {
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	img, err := Render(data)
+	var opts []Option
+	if name == "testdata/folder.svg" {
+		opts = append(opts, WithBestFit(true), WithWidth(200))
+	}
+	img, err := Render(data, opts...)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
