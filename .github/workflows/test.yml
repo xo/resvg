@@ -7,6 +7,8 @@ jobs:
     steps:
     - name: Install Go
       uses: actions/setup-go@v4
+      with:
+        go-version: stable
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Test
@@ -19,6 +21,8 @@ jobs:
     steps:
     - name: Install Go
       uses: actions/setup-go@v4
+      with:
+        go-version: stable
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Test
@@ -31,6 +35,8 @@ jobs:
     steps:
     - name: Install Go
       uses: actions/setup-go@v4
+      with:
+        go-version: stable
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Test
