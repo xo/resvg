@@ -4,11 +4,11 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/base64"
+	"fmt"
 	"image/png"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -90,12 +90,15 @@ func testRender(t *testing.T, name string) {
 
 func TestScale(t *testing.T) {
 	tests := []struct {
-		mode         ScaleMode
-		w, h, ww, wh uint
-		expw         int
-		exph         int
-		expx         float32
-		expy         float32
+		mode   ScaleMode
+		width  uint
+		height uint
+		w      uint
+		h      uint
+		expw   int
+		exph   int
+		expx   float32
+		expy   float32
 	}{
 		{ScaleNone, 100, 100, 0, 0, 100, 100, 1.0, 1.0},
 		{ScaleNone, 100, 100, 200, 50, 200, 50, 2.0, 0.5},
@@ -113,10 +116,16 @@ func TestScale(t *testing.T) {
 		{ScaleBestFit, 100, 100, 1000, 960, 960, 960, 9.6, 9.6},
 		{ScaleBestFit, 1000, 1000, 200, 300, 200, 200, 0.2, 0.2},
 		{ScaleBestFit, 1000, 5000, 100, 200, 40, 200, 0.04, 0.04},
+		{ScaleBestFit, 16, 16, 200, 200, 200, 200, 12.5, 12.5},
+		{ScaleBestFit, 200, 200, 16, 16, 16, 16, 0.08, 0.08},
+		{ScaleBestFit, 250, 200, 100, 90, 100, 80, 0.4, 0.4},
+		{ScaleBestFit, 16, 16, 200, 0, 200, 200, 12.5, 12.5},
+		{ScaleBestFit, 200, 200, 0, 16, 16, 16, 0.08, 0.08},
+		{ScaleBestFit, 250, 200, 0, 90, 113, 90, 0.45, 0.45},
 	}
-	for i, test := range tests {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			w, h, x, y := test.mode.Scale(test.w, test.h, test.ww, test.wh)
+	for _, test := range tests {
+		t.Run(fmt.Sprintf("%d_%d_%d_%d", test.width, test.height, test.w, test.h), func(t *testing.T) {
+			w, h, x, y := test.mode.Scale(test.width, test.height, test.w, test.h)
 			if w != test.expw {
 				t.Errorf("expected w %d, got: %d", test.expw, w)
 			}
