@@ -66,8 +66,8 @@ func Example_background() {
 	// width: 400 height: 180
 }
 
-func Example_bestFit() {
-	a, err := resvg.Render(svgData, resvg.WithBestFit(true), resvg.WithWidth(300))
+func Example_scaleBestFit() {
+	a, err := resvg.Render(svgData, resvg.WithScaleMode(resvg.ScaleBestFit), resvg.WithWidth(300))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,11 +80,11 @@ func Example_bestFit() {
 	if err := os.WriteFile("rect_bestfit_a.png", buf.Bytes(), 0o644); err != nil {
 		log.Fatal(err)
 	}
-	b, err := resvg.Render(svgData, resvg.WithBestFit(true), resvg.WithHeight(135))
+	b, err := resvg.Render(svgData, resvg.WithScaleMode(resvg.ScaleBestFit), resvg.WithHeight(135))
 	if err != nil {
 		log.Fatal(err)
 	}
-	bb := a.Bounds()
+	bb := b.Bounds()
 	fmt.Printf("width: %d height: %d\n", bb.Max.X, bb.Max.Y)
 	buf.Reset()
 	if err := png.Encode(buf, b); err != nil {
@@ -98,7 +98,7 @@ func Example_bestFit() {
 	// width: 300 height: 135
 }
 
-func Example_scale() {
+func Example_distort() {
 	img, err := resvg.Render(svgData, resvg.WithWidth(200), resvg.WithHeight(700))
 	if err != nil {
 		log.Fatal(err)
@@ -109,7 +109,7 @@ func Example_scale() {
 	if err := png.Encode(buf, img); err != nil {
 		log.Fatal(err)
 	}
-	if err := os.WriteFile("rect_scale.png", buf.Bytes(), 0o644); err != nil {
+	if err := os.WriteFile("rect_distort.png", buf.Bytes(), 0o644); err != nil {
 		log.Fatal(err)
 	}
 	// Output:
