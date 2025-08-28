@@ -134,8 +134,8 @@ func (r *Resvg) Render(data []byte) (*image.RGBA, error) {
 	// background
 	img := image.NewRGBA(image.Rect(0, 0, int(width), int(height)))
 	if c := color.RGBAModel.Convert(r.background).(color.RGBA); c.R != 0 || c.G != 0 || c.B != 0 || c.A != 0 {
-		for i := 0; i < width; i++ {
-			for j := 0; j < height; j++ {
+		for i := range width {
+			for j := range height {
 				img.SetRGBA(i, j, c)
 			}
 		}
