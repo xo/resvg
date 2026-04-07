@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # github repo
-REPO=RazrFalcon/resvg
+REPO=linebender/resvg
 
 SRC=$(realpath $(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd))
 

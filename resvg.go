@@ -59,7 +59,8 @@ import (
 type Resvg struct {
 	loadSystemFonts bool
 	resourcesDir    string
-	dp              float32
+	dpi             float32
+	stylesheet      string
 	fontFamily      string
 	fontSize        float32
 	serifFamily     string
@@ -189,8 +190,13 @@ func (r *Resvg) buildOpts() {
 		C.resvg_options_set_resources_dir(opts, s)
 		C.free(unsafe.Pointer(s))
 	}
-	if r.dp != 0.0 {
-		C.resvg_options_set_dpi(opts, C.float(r.dp))
+	if r.dpi != 0.0 {
+		C.resvg_options_set_dpi(opts, C.float(r.dpi))
+	}
+	if r.stylesheet != "" {
+		s := C.CString(r.stylesheet)
+		C.resvg_options_set_stylesheet(opts, s)
+		C.free(unsafe.Pointer(s))
 	}
 	if r.fontFamily != "" {
 		s := C.CString(r.fontFamily)
@@ -437,7 +443,14 @@ func WithResourcesDir(resourcesDir string) Option {
 // WithDPI is a resvg option to set the DPI.
 func WithDPI(dpi float32) Option {
 	return func(r *Resvg) {
-		r.dp = dpi
+		r.dpi = dpi
+	}
+}
+
+// WithStylesheet is a resvg option to set the stylesheet.
+func WithStylesheet(stylesheet string) Option {
+	return func(r *Resvg) {
+		r.stylesheet = stylesheet
 	}
 }
 

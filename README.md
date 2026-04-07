@@ -93,24 +93,11 @@ Build Darwin images:
 $ git clone https://github.com/cross-rs/cross.git
 $ cd cross && git submodule update --init --remote
 
-
 # grab sdk
-$ cd cross/docker/cross-toolchains/docker
 $ export SDK='https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz'
-$ curl -O -J -L "$SDK"
-
-# NOTE: 14.2 (what's generated below) doesn't seem to work with the
-# NOTE: build-docker-image command below
-
-# download sdk from apple at https://developer.apple.com/download/all/?q=xcode
-# then use osxcross to generate the sdk
-# https://github.com/tpoechtrager/osxcross?tab=readme-ov-file#packaging-the-sdk
-$ git clone https://github.com/tpoechtrager/osxcross.git && cd osxcross
-$ ./tools/gen_sdk_package_pbzx.sh ~/Downloads/Xcode_15.2.xip
+$ curl -O -J -L "$SDK" -o cross/docker/$(basename "$SDK")
 
 # build containers
-$ cd cross
-$ mv /path/to/MacOSX11.3.sdk.tar.xz docker/
 $ cargo build-docker-image x86_64-apple-darwin-cross --build-arg 'MACOS_SDK_FILE=MacOSX11.3.sdk.tar.xz'
 $ cargo build-docker-image aarch64-apple-darwin-cross --build-arg 'MACOS_SDK_FILE=MacOSX11.3.sdk.tar.xz'
 
@@ -129,7 +116,7 @@ $ ./gen.sh
 
 ```sh
 $ mkdir -p libresvg/$(go env GOOS)_$(go env GOARCH)
-$ git clone https://github.com/RazrFalcon/resvg.git && cd resvg/crates/c-api
+$ git clone https://github.com/linebender/resvg.git && cd resvg/crates/c-api
 $ cargo build --release
 $ cp ../../target/release/libresvg.a ../../../libresvg/$(go env GOOS)_$(go env GOARCH)
 $ cd ../../../ && rm -rf resvg
@@ -155,6 +142,6 @@ Use
 - [vegagoja][vegagoja] - a package to render Vega visualizations
 - [usql][usql] - a universal command-line interface for SQL databases
 
-[resvg]: https://github.com/RazrFalcon/resvg
+[resvg]: https://github.com/linebender/resvg
 [usql]: https://github.com/xo/usql
 [vegagoja]: https://github.com/xo/vegagoja
