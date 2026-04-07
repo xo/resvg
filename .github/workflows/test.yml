@@ -5,40 +5,40 @@ jobs:
     name: Test for Linux
     runs-on: ubuntu-latest
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: stable
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Test
-      run: |
-        go test -v -x
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Test
+        run: |
+          go test -v -x
 
   test_for_macos:
     name: Test for macOS
     runs-on: macos-latest
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: stable
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Test
-      run: |
-        go test -v -x
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Test
+        run: |
+          go test -v -x
 
   test_for_windows:
     name: Test for Windows
     runs-on: windows-latest
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: stable
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Test
-      run: |
-        go test -v -x -ldflags '-extldflags "-static"'
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Test
+        run: |
+          go test -v -x -ldflags '-extldflags "-static"'
