@@ -1,6 +1,6 @@
 // Package resvg is a wrapper around rust's [resvg] c-api crate.
 //
-// [resvg]: https://github.com/RazrFalcon/resvg
+// [resvg]: https://github.com/linebender/resvg
 package resvg
 
 /*
@@ -55,7 +55,7 @@ import (
 
 // Resvg wraps the [resvg c-api] to render svgs as standard a [image.RGBA].
 //
-// [resvg c-api]: https://github.com/RazrFalcon/resvg
+// [resvg c-api]: https://github.com/linebender/resvg
 type Resvg struct {
 	loadSystemFonts bool
 	resourcesDir    string
