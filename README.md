@@ -91,14 +91,15 @@ Build Darwin images:
 ```sh
 # get cross
 $ git clone https://github.com/cross-rs/cross.git
-$ cd cross && git submodule update --init --remote
+$ git -C cross submodule update --init --remote
 
 # grab sdk
 $ export SDK='https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz'
 $ curl -O -J -L "$SDK" -o cross/docker/$(basename "$SDK")
 
-# build containers
-$ cargo build-docker-image x86_64-apple-darwin-cross --build-arg 'MACOS_SDK_FILE=MacOSX11.3.sdk.tar.xz'
+# build containers (from cross directory, make sure the sdk file is in the cross/docker directory)
+$ cd cross
+$ cargo build-docker-image x86_64-apple-darwin-cross  --build-arg 'MACOS_SDK_FILE=MacOSX11.3.sdk.tar.xz'
 $ cargo build-docker-image aarch64-apple-darwin-cross --build-arg 'MACOS_SDK_FILE=MacOSX11.3.sdk.tar.xz'
 
 # add rust toolchains
