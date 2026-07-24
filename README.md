@@ -95,12 +95,15 @@ $ git -C cross submodule update --init --remote
 
 # grab sdk
 $ export SDK='https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz'
-$ curl -O -J -L "$SDK" -o cross/docker/$(basename "$SDK")
+$ curl -L -o cross/docker/$(basename "$SDK") "$SDK"
+$ md5sum cross/docker/MacOSX11.3.sdk.tar.xz
+22c0ed904531f6d7dee4f87c15f7cf47  cross/docker/MacOSX11.3.sdk.tar.xz
 
 # build containers (from cross directory, make sure the sdk file is in the cross/docker directory)
 $ cd cross
-$ cargo build-docker-image x86_64-apple-darwin-cross  --build-arg 'MACOS_SDK_FILE=MacOSX11.3.sdk.tar.xz'
-$ cargo build-docker-image aarch64-apple-darwin-cross --build-arg 'MACOS_SDK_FILE=MacOSX11.3.sdk.tar.xz'
+# manually fix docker/common.sh to comment out sed -i for ubuntu sources
+$ CROSS_CONTAINER_ENGINE_NO_BUILDKIT=1 cargo build-docker-image x86_64-apple-darwin-cross  --build-arg 'MACOS_SDK_FILE=MacOSX11.3.sdk.tar.xz'
+$ CROSS_CONTAINER_ENGINE_NO_BUILDKIT=1 cargo build-docker-image aarch64-apple-darwin-cross --build-arg 'MACOS_SDK_FILE=MacOSX11.3.sdk.tar.xz'
 
 # add rust toolchains
 $ rustup target add x86_64-apple-darwin
