@@ -101,7 +101,20 @@ $ md5sum cross/docker/MacOSX11.3.sdk.tar.xz
 
 # build containers (from cross directory, make sure the sdk file is in the cross/docker directory)
 $ cd cross
-# manually fix docker/common.sh to comment out sed -i for ubuntu sources
+
+# -----------------------------------------------------------------------------------
+# 1. edit docker/common.sh to comment out sed -i for ubuntu sources
+#
+# 2. update:
+#
+#      docker/cross-toolchains/docker/Dockerfile.{x86_64,aarch64}-apple-darwin-cross
+#
+#    to use the latest ubuntu:24.04 image, or use the base image the other base cross-rs images are using
+#
+# 3. change the llvm version used in the darwin.sh script:
+#      perl -pi -e 's/install_llvm 16/install_llvm 22/' cross/docker/cross-toolchains/docker/darwin.sh
+# -----------------------------------------------------------------------------------
+
 $ CROSS_CONTAINER_ENGINE_NO_BUILDKIT=1 cargo build-docker-image x86_64-apple-darwin-cross  --build-arg 'MACOS_SDK_FILE=MacOSX11.3.sdk.tar.xz'
 $ CROSS_CONTAINER_ENGINE_NO_BUILDKIT=1 cargo build-docker-image aarch64-apple-darwin-cross --build-arg 'MACOS_SDK_FILE=MacOSX11.3.sdk.tar.xz'
 
