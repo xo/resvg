@@ -1,44 +1,133 @@
 name: Test
-on: [push, pull_request]
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CGO_ENABLED: "1"
+
 jobs:
-  test_for_linux:
-    name: Test for Linux
+  test:
+    name: test / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux_amd64
+          # Not covering linux_arm (32-bit) or darwin_amd64 here: no
+          # GitHub-hosted runner exists for either, same gap xo/blitz
+          # accepts in its own CI. Both are still built and shipped by
+          # gen.sh, just not test-executed.
+          - os: ubuntu-26.04-arm
+            target: linux_arm64
+          - os: macos-latest
+            target: darwin_arm64 # macos-latest runners are Apple silicon
+          - os: windows-latest
+            target: windows_amd64
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      # Unlike xo/blitz, no font packages to install here: resvg_test.go
+      # pins an embedded font (testdata/fonts/) and disables system fonts,
+      # so rendering doesn't depend on what happens to be on the runner.
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Check the generated libresvg scaffolding is current
+        if: matrix.target == 'linux_amd64'
+        shell: bash
+        run: |
+          ./gen.sh -m
+          git diff --exit-code -- go.mod libresvg link_*.go
+
+      - name: Check no module is over the go command's size cap
+        if: matrix.target == 'linux_amd64'
+        shell: bash
+        # golang.org/x/mod/zip.MaxZipFile: the go command refuses a module
+        # whose zip OR extracted content exceeds 500 MiB. Files in a nested
+        # module do not count towards the parent, so each is measured on
+        # its own.
+        run: |
+          status=0
+          cap=$((500 * 1024 * 1024))
+          for d in . libresvg/*/; do
+            if [ "$d" = "." ]; then
+              bytes=$(git ls-files -z \
+                | grep -zv '^libresvg/[^/]*/' \
+                | xargs -0 -r stat -c %s \
+                | awk '{s+=$1} END {print s+0}')
+            else
+              bytes=$(git ls-files -z -- "$d" \
+                | xargs -0 -r stat -c %s \
+                | awk '{s+=$1} END {print s+0}')
+            fi
+            printf '%-28s %8.1f MiB\n' "$d" "$(echo "$bytes" | awk '{print $1/1048576}')"
+            if [ "$bytes" -ge "$cap" ]; then
+              echo "::error::$d is over the 500 MiB module limit"
+              status=1
+            fi
+          done
+          exit $status
+
+      - name: go test -race
+        if: runner.os != 'Windows'
+        run: go test -race -v ./...
+
+      - name: go test
+        if: runner.os == 'Windows'
+        # Without -race: this repo's Windows build links statically (see
+        # README's "Using on Windows", -extldflags "-static"), which the
+        # existing CI has never combined with the race detector.
+        run: go test -v -ldflags '-extldflags "-static"'
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: renders-${{ matrix.target }}
+          path: testdata/*.svg.png
+          if-no-files-found: warn
+          retention-days: 7
+
+  hygiene:
+    name: committed file sizes + permissions
     runs-on: ubuntu-latest
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: stable
-      - name: Checkout code
-        uses: actions/checkout@v6
-      - name: Test
-        run: |
-          go test -v -x
+      - uses: actions/checkout@v6
 
-  test_for_macos:
-    name: Test for macOS
-    runs-on: macos-latest
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: stable
-      - name: Checkout code
-        uses: actions/checkout@v6
-      - name: Test
+      - name: No file over GitHub's 100 MiB limit
+        shell: bash
         run: |
-          go test -v -x
+          oversized=$(find . -path ./.git -prune -o -type f -size +100M -print)
+          if [ -n "$oversized" ]; then
+            echo "::error::over the 100 MiB file limit: $oversized"
+            ls -lh $oversized
+            exit 1
+          fi
+          echo "largest committed files:"
+          find . -path ./.git -prune -o -type f -printf '%s %p\n' \
+            | sort -rn | head -5 \
+            | awk '{ printf "  %6.1f MiB  %s\n", $1/1048576, $2 }'
 
-  test_for_windows:
-    name: Test for Windows
-    runs-on: windows-latest
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: stable
-      - name: Checkout code
-        uses: actions/checkout@v6
-      - name: Test
+      - name: Archives are not executable
         run: |
-          go test -v -x -ldflags '-extldflags "-static"'
+          bad=$(find libresvg -name '*.a' -perm -u+x -print)
+          if [ -n "$bad" ]; then
+            echo "::error::executable bit set on: $bad (gen.sh should chmod -x)"
+            exit 1
+          fi
