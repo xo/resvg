@@ -55,6 +55,21 @@ import (
 
 // Resvg wraps the [resvg c-api] to render svgs as standard a [image.RGBA].
 //
+// A Resvg's configuration is fixed by the Option values passed to New and
+// never changes afterward: there is no method to alter it once created. That
+// makes a *Resvg, including the package-level Default, safe to share across
+// goroutines -- concurrent calls to Parse, Render, and ParseConfig only read
+// the underlying C options, never write them, and resvg's C API supports
+// parsing and rendering concurrently against the same, unmodified
+// resvg_options. Close is the only method that mutates a Resvg. It is safe to
+// call concurrently with the others: it blocks until any in-flight call
+// completes, releases the C options, and causes every call afterward to
+// return ErrClosed.
+//
+// Default must not be closed: it backs the package-level Render, Decode, and
+// DecodeConfig, and the image.Format handlers registered for "svg". Closing
+// it breaks every caller of those for the remainder of the process.
+//
 // [resvg c-api]: https://github.com/linebender/resvg
 type Resvg struct {
 	loadSystemFonts bool
@@ -79,11 +94,15 @@ type Resvg struct {
 	height          uint
 	scaleMode       ScaleMode
 	transform       []float32
-	opts            *C.resvg_options
-	once            sync.Once
+
+	mu     sync.RWMutex
+	opts   *C.resvg_options
+	closed bool
 }
 
-// New creates a new resvg.
+// New creates a new resvg, applying opts and building its underlying C
+// options immediately. The returned Resvg's configuration cannot be changed
+// afterward; construct a new one with different opts instead.
 func New(opts ...Option) *Resvg {
 	r := &Resvg{
 		loadSystemFonts: true,
@@ -95,88 +114,76 @@ func New(opts ...Option) *Resvg {
 	for _, o := range opts {
 		o(r)
 	}
+	r.buildOpts()
 	runtime.SetFinalizer(r, (*Resvg).finalize)
 	return r
 }
 
 // ParseConfig parses the svg, returning an image config.
 func (r *Resvg) ParseConfig(data []byte) (image.Config, error) {
-	tree, width, height, _, _, err := r.parse(data)
+	t, err := r.Parse(data)
 	if err != nil {
 		return image.Config{}, err
 	}
-	// destroy
-	C.resvg_tree_destroy(tree)
-	return image.Config{
-		ColorModel: color.RGBAModel,
-		Width:      width,
-		Height:     height,
-	}, nil
+	defer t.Close()
+	return t.Config()
 }
 
 // Render renders svg data as a RGBA image.
 func (r *Resvg) Render(data []byte) (*image.RGBA, error) {
-	tree, width, height, scaleX, scaleY, err := r.parse(data)
+	t, err := r.Parse(data)
 	if err != nil {
 		return nil, err
 	}
-	// build transform
-	ts := C.resvg_transform_identity()
-	if r.transform == nil {
-		ts.a, ts.d = C.float(scaleX), C.float(scaleY)
-	} else {
-		ts.a = C.float(r.transform[0])
-		ts.b = C.float(r.transform[1])
-		ts.c = C.float(r.transform[2])
-		ts.d = C.float(r.transform[3])
-		ts.e = C.float(r.transform[4])
-		ts.f = C.float(r.transform[5])
-	}
-	// background
-	img := image.NewRGBA(image.Rect(0, 0, int(width), int(height)))
-	if c := color.RGBAModel.Convert(r.background).(color.RGBA); c.R != 0 || c.G != 0 || c.B != 0 || c.A != 0 {
-		for i := range width {
-			for j := range height {
-				img.SetRGBA(i, j, c)
-			}
-		}
-	}
-	// render
-	C.render(tree, C.int(width), C.int(height), ts, img.Pix)
-	// destroy
-	C.resvg_tree_destroy(tree)
-	return img, nil
+	defer t.Close()
+	return t.Render()
 }
 
-// parse parses the svg data, returning the width, height, and scaling factors.
-func (r *Resvg) parse(data []byte) (*C.resvg_render_tree, int, int, float32, float32, error) {
-	r.once.Do(r.buildOpts)
-	if r.opts == nil {
-		return nil, 0, 0, 0.0, 0.0, ErrOptionsNotInitialized
+// Parse parses svg data into a Tree using r's options. Parsing is the
+// expensive part of rendering an SVG; keeping the returned Tree around lets a
+// caller call Config and Render more than once without reparsing data. The
+// Tree must be released with Close once it is no longer needed.
+func (r *Resvg) Parse(data []byte) (*Tree, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.closed {
+		return nil, ErrClosed
 	}
 	// parse
 	tree, err := C.parse(data, r.opts)
 	if err != nil {
-		return nil, 0, 0, 0.0, 0.0, newErrNo(err)
+		return nil, newErrNo(err)
 	}
 	// dimensions
 	size := C.resvg_get_image_size(tree)
 	if size.width == 0 || size.height == 0 {
-		return nil, 0, 0, 0.0, 0.0, ErrInvalidWidthOrHeight
+		C.resvg_tree_destroy(tree)
+		return nil, ErrInvalidWidthOrHeight
 	}
-	// determine height, width, scaleX, scaleY
-	width, height, scaleX, scaleY := r.scaleMode.Scale(uint(size.width), uint(size.height), r.width, r.height)
-	switch {
-	case width == 0:
-		return nil, 0, 0, 0.0, 0.0, ErrInvalidWidth
-	case height == 0:
-		return nil, 0, 0, 0.0, 0.0, ErrInvalidHeight
-	case scaleX == 0.0:
-		return nil, 0, 0, 0.0, 0.0, ErrInvalidXScale
-	case scaleY == 0.0:
-		return nil, 0, 0, 0.0, 0.0, ErrInvalidYScale
+	t := &Tree{r: r, tree: tree, width: int(size.width), height: int(size.height)}
+	runtime.SetFinalizer(t, (*Tree).finalize)
+	return t, nil
+}
+
+// Close releases the C resources associated with r. Safe to call more than
+// once, and safe to call concurrently with Parse, Render, and ParseConfig: it
+// blocks until any of those already in flight complete. Every call to r,
+// and to any Tree already obtained from r, returns ErrClosed afterward.
+func (r *Resvg) Close() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.destroyLocked()
+	return nil
+}
+
+// destroyLocked releases the C options. r.mu must be held for writing.
+func (r *Resvg) destroyLocked() {
+	if r.opts != nil {
+		C.resvg_options_destroy(r.opts)
+		r.opts = nil
 	}
-	return tree, width, height, scaleX, scaleY, nil
+	r.closed = true
+	runtime.SetFinalizer(r, nil)
 }
 
 // buildOpts builds the resvg options.
@@ -262,11 +269,129 @@ func (r *Resvg) buildOpts() {
 
 // finalize finalizes the C allocations.
 func (r *Resvg) finalize() {
-	if r.opts != nil {
-		C.resvg_options_destroy(r.opts)
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.destroyLocked()
+}
+
+// Tree is an SVG parsed by [Resvg.Parse]. Parsing is independent of the
+// scaling, background, and transform used to render it, so the same Tree can
+// be rendered more than once -- via repeated calls to Render or Config --
+// without reparsing the source data. A Tree must be released with Close once
+// it is no longer needed; a finalizer releases it otherwise, but that is not
+// guaranteed to run promptly.
+//
+// A Tree is tied to the Resvg that parsed it and reads that Resvg's Width,
+// Height, ScaleMode, Background, and Transform each time Config or Render is
+// called, so changing which Resvg produced it is not possible, but the
+// caller can rely on those values as of the current Resvg -- they cannot
+// change after New. Concurrent calls to Config and Render on the same Tree
+// from multiple goroutines are safe; Close is safe to call concurrently with
+// them and blocks until any in-flight call completes.
+type Tree struct {
+	r    *Resvg
+	mu   sync.RWMutex
+	tree *C.resvg_render_tree
+
+	width  int
+	height int
+}
+
+// scale computes the tree's scaled dimensions and scaling factors, using
+// t.r's current Width, Height, and ScaleMode.
+func (t *Tree) scale() (int, int, float32, float32, error) {
+	width, height, scaleX, scaleY := t.r.scaleMode.Scale(uint(t.width), uint(t.height), t.r.width, t.r.height)
+	switch {
+	case width == 0:
+		return 0, 0, 0, 0, ErrInvalidWidth
+	case height == 0:
+		return 0, 0, 0, 0, ErrInvalidHeight
+	case scaleX == 0.0:
+		return 0, 0, 0, 0, ErrInvalidXScale
+	case scaleY == 0.0:
+		return 0, 0, 0, 0, ErrInvalidYScale
 	}
-	r.opts = nil
-	runtime.SetFinalizer(r, nil)
+	return width, height, scaleX, scaleY, nil
+}
+
+// Config returns the tree's scaled image dimensions, using t.r's current
+// Width, Height, and ScaleMode.
+func (t *Tree) Config() (image.Config, error) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.tree == nil {
+		return image.Config{}, ErrClosed
+	}
+	width, height, _, _, err := t.scale()
+	if err != nil {
+		return image.Config{}, err
+	}
+	return image.Config{ColorModel: color.RGBAModel, Width: width, Height: height}, nil
+}
+
+// Render renders the tree as an RGBA image, using t.r's current Width,
+// Height, ScaleMode, Background, and Transform.
+func (t *Tree) Render() (*image.RGBA, error) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.tree == nil {
+		return nil, ErrClosed
+	}
+	width, height, scaleX, scaleY, err := t.scale()
+	if err != nil {
+		return nil, err
+	}
+	// build transform
+	ts := C.resvg_transform_identity()
+	if t.r.transform == nil {
+		ts.a, ts.d = C.float(scaleX), C.float(scaleY)
+	} else {
+		ts.a = C.float(t.r.transform[0])
+		ts.b = C.float(t.r.transform[1])
+		ts.c = C.float(t.r.transform[2])
+		ts.d = C.float(t.r.transform[3])
+		ts.e = C.float(t.r.transform[4])
+		ts.f = C.float(t.r.transform[5])
+	}
+	// background
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	if c := color.RGBAModel.Convert(t.r.background).(color.RGBA); c.R != 0 || c.G != 0 || c.B != 0 || c.A != 0 {
+		for i := range width {
+			for j := range height {
+				img.SetRGBA(i, j, c)
+			}
+		}
+	}
+	// render
+	C.render(t.tree, C.int(width), C.int(height), ts, img.Pix)
+	return img, nil
+}
+
+// Close releases the C resources associated with t. Safe to call more than
+// once, and safe to call concurrently with Config and Render: it blocks
+// until any of those already in flight complete. Every call to t returns
+// ErrClosed afterward.
+func (t *Tree) Close() error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.destroyLocked()
+	return nil
+}
+
+// destroyLocked releases the C tree. t.mu must be held for writing.
+func (t *Tree) destroyLocked() {
+	if t.tree != nil {
+		C.resvg_tree_destroy(t.tree)
+		t.tree = nil
+	}
+	runtime.SetFinalizer(t, nil)
+}
+
+// finalize finalizes the C allocations.
+func (t *Tree) finalize() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.destroyLocked()
 }
 
 // ShapeRendering is the shape rendering mode.
@@ -375,12 +500,12 @@ type Error string
 
 // Errors.
 const (
-	ErrOptionsNotInitialized Error = "options not initialized"
-	ErrInvalidWidthOrHeight  Error = "invalid width or height"
-	ErrInvalidWidth          Error = "invalid width"
-	ErrInvalidHeight         Error = "invalid height"
-	ErrInvalidXScale         Error = "invalid x scale"
-	ErrInvalidYScale         Error = "invalid y scale"
+	ErrClosed               Error = "closed"
+	ErrInvalidWidthOrHeight Error = "invalid width or height"
+	ErrInvalidWidth         Error = "invalid width"
+	ErrInvalidHeight        Error = "invalid height"
+	ErrInvalidXScale        Error = "invalid x scale"
+	ErrInvalidYScale        Error = "invalid y scale"
 )
 
 // Error satisfies the [error] interface.

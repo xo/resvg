@@ -4,12 +4,14 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"image/png"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -140,6 +142,96 @@ func TestScale(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestClose(t *testing.T) {
+	data, err := os.ReadFile("testdata/rect.svg")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	r := New()
+	if _, err := r.Render(data); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if err := r.Close(); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if err := r.Close(); err != nil {
+		t.Fatalf("expected second close to be a no-op, got: %v", err)
+	}
+	if _, err := r.Render(data); !errors.Is(err, ErrClosed) {
+		t.Fatalf("expected %v, got: %v", ErrClosed, err)
+	}
+	if _, err := r.ParseConfig(data); !errors.Is(err, ErrClosed) {
+		t.Fatalf("expected %v, got: %v", ErrClosed, err)
+	}
+	if _, err := r.Parse(data); !errors.Is(err, ErrClosed) {
+		t.Fatalf("expected %v, got: %v", ErrClosed, err)
+	}
+}
+
+func TestTreeReuse(t *testing.T) {
+	data, err := os.ReadFile("testdata/rect.svg")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	r := New()
+	defer r.Close()
+	tree, err := r.Parse(data)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	cfg, err := tree.Config()
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	img1, err := tree.Render()
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if b := img1.Bounds().Size(); b.X != cfg.Width || b.Y != cfg.Height {
+		t.Fatalf("expected %dx%d, got: %dx%d", cfg.Width, cfg.Height, b.X, b.Y)
+	}
+	// render the same tree a second time, without reparsing
+	img2, err := tree.Render()
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if !bytes.Equal(img1.Pix, img2.Pix) {
+		t.Fatalf("expected repeated renders of the same tree to match")
+	}
+	if err := tree.Close(); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if err := tree.Close(); err != nil {
+		t.Fatalf("expected second close to be a no-op, got: %v", err)
+	}
+	if _, err := tree.Render(); !errors.Is(err, ErrClosed) {
+		t.Fatalf("expected %v, got: %v", ErrClosed, err)
+	}
+	if _, err := tree.Config(); !errors.Is(err, ErrClosed) {
+		t.Fatalf("expected %v, got: %v", ErrClosed, err)
+	}
+}
+
+func TestConcurrentRender(t *testing.T) {
+	data, err := os.ReadFile("testdata/rect.svg")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	r := New()
+	defer r.Close()
+	var wg sync.WaitGroup
+	for range 16 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := r.Render(data); err != nil {
+				t.Errorf("expected no error, got: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 func cleanString(s string) string {
