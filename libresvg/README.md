@@ -51,9 +51,18 @@ Measured on disk:
 | **one platform (per consumer build)** | **~20-37 MiB** |
 | all six, as one module | ~184 MiB |
 
-The one rough edge: `go get` and `go mod tidy` walk every GOOS/GOARCH, so the
-first of either in a consumer's tree fetches all six to record `go.sum`
-hashes. Ordinary builds afterward fetch one.
+The one rough edge: `go get`, `go mod tidy`, and a bare `go mod download`
+(with no package arguments) all walk every GOOS/GOARCH, so any of them
+fetches all six to record `go.sum` hashes or populate the module cache. This
+is expected, not a sign the split isn't working -- measuring the win by
+running one of those and looking at what landed in the module cache will
+show all six and looks like nothing changed. `go build`, `go install`, and
+CI both before and after fetch one, which is where the win actually is:
+confirmed against a real consumer (usql, `-tags charts`) with a cold module
+cache -- a linux/amd64 build pulled 11 MiB of zips (`resvg` +
+`libresvg/linux_amd64`, extracting to ~37 MiB) against v0.8.0's 184 MiB
+monolith, and `go list -deps` for all six GOOS/GOARCH pairs each resolved to
+their own submodule and no other.
 
 ## An unsupported platform still fails at the linker, not before it
 
