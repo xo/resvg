@@ -9,13 +9,18 @@ go 1.25
 // go command fetches a module's zip only when a package it provides is
 // actually in the build. A linux/amd64 build pulls ~37 MiB, not the ~184 MiB
 // all six come to. See libresvg/README.md.
+//
+// Each platform module is tagged with the same version as the vendored resvg
+// release it carries (see version.txt at the repository root), not an
+// independent version of its own -- there is exactly one version number to
+// track, not two.
 require (
-	github.com/xo/resvg/libresvg/darwin_amd64 v0.1.0
-	github.com/xo/resvg/libresvg/darwin_arm64 v0.1.0
-	github.com/xo/resvg/libresvg/linux_amd64 v0.1.0
-	github.com/xo/resvg/libresvg/linux_arm v0.1.0
-	github.com/xo/resvg/libresvg/linux_arm64 v0.1.0
-	github.com/xo/resvg/libresvg/windows_amd64 v0.1.0
+	github.com/xo/resvg/libresvg/darwin_amd64 v0.48.1
+	github.com/xo/resvg/libresvg/darwin_arm64 v0.48.1
+	github.com/xo/resvg/libresvg/linux_amd64 v0.48.1
+	github.com/xo/resvg/libresvg/linux_arm v0.48.1
+	github.com/xo/resvg/libresvg/linux_arm64 v0.48.1
+	github.com/xo/resvg/libresvg/windows_amd64 v0.48.1
 )
 
 // Local development only, and inert for anyone who depends on this module:

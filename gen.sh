@@ -193,3 +193,17 @@ for TARGET in $BUILD_TARGETS; do
   write_module "$TARGET"
 done
 popd &> /dev/null
+
+# Operational standard: a libresvg/<target> module is tagged with the same
+# version as the vendored resvg release it carries (version.txt), never an
+# independent version of its own. Bump the require block in go.mod to match
+# before tagging the root module.
+VER=$(cat "$SRC/version.txt")
+echo -e "\n\nUpdate the require block in go.mod to $VER, then run:"
+TAGS=()
+for TARGET in $BUILD_TARGETS; do
+  TAGS+=("libresvg/$TARGET/$VER")
+  echo "  git tag libresvg/$TARGET/$VER"
+done
+echo "  git push origin ${TAGS[@]}"
+echo "then tag and push the root module."

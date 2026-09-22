@@ -87,13 +87,29 @@ rebuild. Omit `-t` to regenerate every target.
 
 ## Releasing
 
+A platform module's version is the same as the vendored resvg release it
+carries (`version.txt` at the repository root), never a version of its own.
+That's the operational standard here: one version number to track, not two,
+and semver ordering keeps it correct regardless of what came before -- a new
+resvg release is always a higher version than the last one, so there's
+nothing to reconcile. `gen.sh` prints the exact commands for this at the end
+of a build.
+
 Nested modules are tagged with a path prefix, and the root module's
 `require` block has to name versions that already exist. So the order is:
 
-1. Tag each platform module: `libresvg/darwin_amd64/v0.1.0`, and so on.
+1. Tag each platform module: `libresvg/darwin_amd64/v0.48.1`, and so on,
+   using the version from `version.txt`.
 2. Push those tags and let the proxy see them.
 3. Update the `require` block in the root `go.mod` to match.
-4. Tag the root module.
+4. Tag the root module, with its own independent version -- the root
+   module's version tracks this package's own API, not upstream resvg.
+
+Once a version is pushed and fetched by anyone through the public module
+proxy, its content is cached forever against that exact version string: the
+proxy will never re-fetch it, even if the underlying git tag is later moved
+or deleted. Treat every pushed tag as immutable -- if a mistake ships,
+publish a new version rather than trying to fix the old one in place.
 
 The `replace` block in the root `go.mod` points at the platform modules in
 the working tree, so `go build`, `go test`, and `go mod tidy` all work here
