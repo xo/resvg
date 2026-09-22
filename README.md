@@ -130,6 +130,12 @@ Then use:
 $ ./gen.sh
 ```
 
+This also (re)writes the `go.mod`/`doc.go`/`lib.go` files under
+`libresvg/<target>/` and the root `link_GOOS_GOARCH.go` files -- one Go
+module per platform, so a build only downloads the archive for the platform
+it targets. See [libresvg/README.md](libresvg/README.md) for why, and for
+`./gen.sh -m` to regenerate just that scaffolding without a rebuild.
+
 ### Manually
 
 ```sh
@@ -138,6 +144,7 @@ $ git clone https://github.com/linebender/resvg.git && cd resvg/crates/c-api
 $ cargo build --release
 $ cp ../../target/release/libresvg.a ../../../libresvg/$(go env GOOS)_$(go env GOARCH)
 $ cd ../../../ && rm -rf resvg
+$ ./gen.sh -m -t $(go env GOOS)_$(go env GOARCH)
 ```
 
 To get the needed static dependencies (for Windows or other platforms):

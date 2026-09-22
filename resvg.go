@@ -1,16 +1,16 @@
 // Package resvg is a wrapper around rust's [resvg] c-api crate.
 //
+// The archives are prebuilt and come from a companion module per platform,
+// under github.com/xo/resvg/libresvg/. Each is pulled in by a build-tagged
+// blank import in link_GOOS_GOARCH.go, so `go build` downloads only the one
+// for the platform being built and the #cgo LDFLAGS live next to the archive
+// they describe, in that module's lib.go. See libresvg/README.md.
+//
 // [resvg]: https://github.com/linebender/resvg
 package resvg
 
 /*
 #cgo CFLAGS: -I${SRCDIR}/libresvg
-#cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/libresvg/darwin_amd64 -lresvg -lm
-#cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/libresvg/darwin_arm64 -lresvg -lm
-#cgo linux,amd64 LDFLAGS: -L${SRCDIR}/libresvg/linux_amd64 -lresvg -lm
-#cgo linux,arm64 LDFLAGS: -L${SRCDIR}/libresvg/linux_arm64 -lresvg -lm
-#cgo linux,arm LDFLAGS: -L${SRCDIR}/libresvg/linux_arm -lresvg -lm
-#cgo windows,amd64 LDFLAGS: -L${SRCDIR}/libresvg/windows_amd64 -lresvg -lm -lkernel32 -ladvapi32 -lbcrypt -lntdll -luserenv -lws2_32
 
 #include <stdlib.h>
 #include <string.h>
