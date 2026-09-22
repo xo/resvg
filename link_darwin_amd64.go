@@ -6,6 +6,6 @@ package resvg
 
 // Blank import for the link only: the package has no API, it just carries
 // the darwin_amd64 archive and the #cgo LDFLAGS naming it. Because this file is
-// build-tagged, the go command never downloads the other five platforms'
-// modules when building for this one.
+// build-tagged, the go command never downloads any other platform's module
+// when building for this one.
 import _ "github.com/xo/resvg/libresvg/darwin_amd64"

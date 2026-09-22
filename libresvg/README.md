@@ -12,6 +12,7 @@ libresvg/
   darwin_amd64/libresvg.a
   darwin_arm64/...
   linux_amd64/...
+  linux_amd64_musl/...      opt-in via `go build -tags musl`, see below
   linux_arm64/...
   linux_arm/...
   windows_amd64/...
@@ -28,8 +29,9 @@ package fails to build for everyone downstream.
 
 ## Why each platform is its own module
 
-The six targets come to ~184 MiB. Shipping them all in the root module means
-every consumer downloads all six just to link one.
+The original six targets come to ~184 MiB (linux_amd64_musl, added later, is
+opt-in and not part of that count -- see below). Shipping them all in the
+root module means every consumer downloads all six just to link one.
 
 Splitting fixes that: each target gets its own `go.mod`, and the root module
 imports it from a build-tagged `link_GOOS_GOARCH.go`. The go command
@@ -45,11 +47,12 @@ Measured on disk:
 | darwin_amd64 | 27.6 MiB |
 | darwin_arm64 | 27.1 MiB |
 | linux_amd64 | 36.7 MiB |
+| linux_amd64_musl | 36.8 MiB |
 | linux_arm64 | 37.1 MiB |
 | linux_arm | 33.1 MiB |
 | windows_amd64 | 19.4 MiB |
 | **one platform (per consumer build)** | **~20-37 MiB** |
-| all six, as one module | ~184 MiB |
+| all six original targets, as one module | ~184 MiB |
 
 The one rough edge: `go get`, `go mod tidy`, and a bare `go mod download`
 (with no package arguments) all walk every GOOS/GOARCH, so any of them
@@ -77,6 +80,35 @@ failure mode as before the split, just relocated: previously every `#cgo
 either. Giving unsupported platforms an explicit, earlier error (a
 build-tag-gated stub, or similar) is a separate, larger change to the
 package's build constraints and isn't part of this split.
+
+## musl (Alpine, static linux)
+
+`linux_amd64` is built for the `x86_64-unknown-linux-gnu` Rust target --
+glibc. Alpine and other musl-based distributions have a different libc, and
+before this target existed, linking against `linux_amd64`'s archive from a
+musl host failed (github.com/xo/resvg#1, github.com/xo/usql#494).
+
+`linux_amd64_musl` is built for `x86_64-unknown-linux-musl` instead, and is
+opt-in: pass `-tags musl` to `go build`/`go test` on linux/amd64 to select
+it in place of `linux_amd64`. It can't be automatic -- musl and glibc are
+both `linux && amd64`, and Go has no build constraint for which libc a
+linux host uses, so `linux_amd64`'s own tag excludes `musl` explicitly
+(`linux && amd64 && !musl`) to keep the two from ever both matching.
+
+Building against it needs `libunwind-dev` (or your distribution's
+equivalent) installed at link time -- musl doesn't bundle an unwinder into
+libc the way glibc does via `libgcc_s`, so it isn't implicit here the way
+it is for the other Linux targets. No extra `-lm`: musl folds libm into
+libc, confirmed by linking and running the full test suite in an actual
+Alpine 3.20 container (`apk add gcc musl-dev libunwind-dev`), not just by
+cross-linking from a glibc host -- a glibc host's linker fails on this
+archive with undefined `atan2`/`cos`/`sin`/etc. regardless of what's listed
+in `SYSTEM_LIBS`, because it's the wrong libc to link musl-targeted object
+code against in the first place, not a missing flag.
+
+Only `linux/amd64` is covered for musl today; `linux/arm64` musl (relevant
+to Alpine on ARM) isn't built, same as the gap in CI coverage for
+`linux_arm`.
 
 ## Directory names are interface
 

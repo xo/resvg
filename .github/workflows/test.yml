@@ -111,6 +111,35 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  test-musl:
+    name: test / linux_amd64 (musl)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      # Run inside an actual musl (Alpine) container via `docker run`, not
+      # GitHub's `container:` job feature: that runs every step, including
+      # JS actions like actions/checkout and actions/setup-go, inside the
+      # container too, and those need a glibc Node the Alpine image doesn't
+      # have. This way only the shell commands below run under musl; the
+      # job itself still runs on the normal (glibc) runner.
+      - name: Build, vet, and test -tags musl in Alpine
+        run: |
+          docker run --rm -v "$PWD":/repo:ro docker.io/library/alpine:3.20 sh -c '
+            set -e
+            apk add --no-cache gcc musl-dev libunwind-dev curl
+            gover=$(curl -fsSL https://go.dev/VERSION?m=text | head -1)
+            curl -fsSL "https://go.dev/dl/${gover}.linux-amd64.tar.gz" -o /tmp/go.tgz
+            tar -C /usr/local -xzf /tmp/go.tgz
+            export PATH=/usr/local/go/bin:$PATH
+            cp -r /repo /tmp/resvg
+            cd /tmp/resvg
+            go build -tags musl ./...
+            go vet -cgocall=false -tags musl ./...
+            go test -tags musl -v ./...
+          '
+
   hygiene:
     name: committed file sizes + permissions
     runs-on: ubuntu-latest

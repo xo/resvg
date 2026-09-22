@@ -80,6 +80,19 @@ $ go build -ldflags '-extldflags "-static"'
 Otherwise, the `resvg.dll` (not included) will need to be located next to the
 built Go binary, or in the Windows system path.
 
+### Using on Alpine (musl)
+
+Pass `-tags musl` when building for `linux/amd64` on a musl-based
+distribution such as Alpine, and have `libunwind-dev` (or your
+distribution's equivalent) installed at link time:
+
+```sh
+$ go build -tags musl
+```
+
+See [libresvg/README.md](libresvg/README.md) for why this needs a separate
+target and can't be automatic.
+
 ## Building Artifacts
 
 Notes for building the `libresvg` artifacts:

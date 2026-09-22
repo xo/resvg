@@ -18,6 +18,11 @@ require (
 	github.com/xo/resvg/libresvg/darwin_amd64 v0.48.1
 	github.com/xo/resvg/libresvg/darwin_arm64 v0.48.1
 	github.com/xo/resvg/libresvg/linux_amd64 v0.48.1
+	// linux_amd64_musl is gated behind a manual `musl` build tag, not a
+	// GOOS/GOARCH pair go mod tidy enumerates on its own, so it has to be
+	// kept here by hand -- tidy won't discover or re-add it itself. See
+	// "musl (Alpine, static linux)" in libresvg/README.md.
+	github.com/xo/resvg/libresvg/linux_amd64_musl v0.48.1
 	github.com/xo/resvg/libresvg/linux_arm v0.48.1
 	github.com/xo/resvg/libresvg/linux_arm64 v0.48.1
 	github.com/xo/resvg/libresvg/windows_amd64 v0.48.1
@@ -37,6 +42,7 @@ replace (
 	github.com/xo/resvg/libresvg/darwin_amd64 => ./libresvg/darwin_amd64
 	github.com/xo/resvg/libresvg/darwin_arm64 => ./libresvg/darwin_arm64
 	github.com/xo/resvg/libresvg/linux_amd64 => ./libresvg/linux_amd64
+	github.com/xo/resvg/libresvg/linux_amd64_musl => ./libresvg/linux_amd64_musl
 	github.com/xo/resvg/libresvg/linux_arm => ./libresvg/linux_arm
 	github.com/xo/resvg/libresvg/linux_arm64 => ./libresvg/linux_arm64
 	github.com/xo/resvg/libresvg/windows_amd64 => ./libresvg/windows_amd64

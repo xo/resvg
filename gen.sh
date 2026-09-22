@@ -50,6 +50,7 @@ declare -A TARGETS=(
   [darwin_amd64]=x86_64-apple-darwin
   [darwin_arm64]=aarch64-apple-darwin
   [linux_amd64]=x86_64-unknown-linux-gnu
+  [linux_amd64_musl]=x86_64-unknown-linux-musl
   [linux_arm64]=aarch64-unknown-linux-gnu
   [linux_arm]=armv7-unknown-linux-gnueabihf
   [windows_amd64]=x86_64-pc-windows-gnu
@@ -63,11 +64,16 @@ declare -A TARGETS=(
 #[windows_arm64]=aarch64-pc-windows-msvc
 
 # //go:build constraint for each target, used in the generated lib.go and
-# link_*.go files.
+# link_*.go files. musl isn't a GOOS/GOARCH the go command can select on its
+# own -- linux/amd64 covers both glibc and musl hosts identically -- so
+# linux_amd64_musl is opt-in via a manual `musl` build tag
+# (`go build -tags musl`), and linux_amd64's own tag excludes it so the two
+# never both match the same build.
 declare -A GO_BUILD_TAG=(
   [darwin_amd64]="darwin && amd64"
   [darwin_arm64]="darwin && arm64"
-  [linux_amd64]="linux && amd64"
+  [linux_amd64]="linux && amd64 && !musl"
+  [linux_amd64_musl]="linux && amd64 && musl"
   [linux_arm64]="linux && arm64"
   [linux_arm]="linux && arm"
   [windows_amd64]="windows && amd64"
@@ -79,6 +85,11 @@ declare -A SYSTEM_LIBS=(
   [darwin_amd64]="-lresvg -lm"
   [darwin_arm64]="-lresvg -lm"
   [linux_amd64]="-lresvg -lm"
+  # No -lm: musl folds libm into libc, and rustc's own
+  # --print=native-static-libs for this target reports only these two.
+  # -lunwind is not implicit the way it is via glibc's libgcc_s -- Alpine
+  # needs the libunwind-dev package (or equivalent) at link time.
+  [linux_amd64_musl]="-lresvg -lunwind -lc"
   [linux_arm64]="-lresvg -lm"
   [linux_arm]="-lresvg -lm"
   [windows_amd64]="-lresvg -lm -lkernel32 -ladvapi32 -lbcrypt -lntdll -luserenv -lws2_32"
@@ -133,8 +144,8 @@ package resvg
 
 // Blank import for the link only: the package has no API, it just carries
 // the $target archive and the #cgo LDFLAGS naming it. Because this file is
-// build-tagged, the go command never downloads the other five platforms'
-// modules when building for this one.
+// build-tagged, the go command never downloads any other platform's module
+// when building for this one.
 import _ "github.com/xo/resvg/libresvg/$target"
 __END__
 }
