@@ -600,6 +600,13 @@ func WithSerifFamily(serifFamily string) Option {
 	}
 }
 
+// WithSansSerifFamily is a resvg option to set the sans-serif family.
+func WithSansSerifFamily(sansSerifFamily string) Option {
+	return func(r *Resvg) {
+		r.sansSerifFamily = sansSerifFamily
+	}
+}
+
 // WithCursiveFamily is a resvg option to set the cursive family.
 func WithCursiveFamily(cursiveFamily string) Option {
 	return func(r *Resvg) {
