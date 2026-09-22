@@ -98,6 +98,35 @@ func Example_scaleBestFit() {
 	// width: 300 height: 135
 }
 
+// Example_fonts renders an SVG containing text using a specific, embedded
+// font rather than whatever happens to be installed on the system. Load a
+// font file (or use WithFonts for in-memory font data), disable system
+// fonts so the loaded one is actually used, and map any generic CSS family
+// name the SVG's text uses (here, "sans-serif") to it -- without that
+// mapping, text set to a generic family won't resolve to a specific loaded
+// font just because system fonts are off.
+func Example_fonts() {
+	img, err := resvg.Render(svgDataText,
+		resvg.WithLoadSystemFonts(false),
+		resvg.WithFontFiles("testdata/fonts/DejaVuSans.ttf"),
+		resvg.WithSansSerifFamily("DejaVu Sans"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	b := img.Bounds()
+	fmt.Printf("width: %d height: %d\n", b.Max.X, b.Max.Y)
+	buf := new(bytes.Buffer)
+	if err := png.Encode(buf, img); err != nil {
+		log.Fatal(err)
+	}
+	if err := os.WriteFile("text.png", buf.Bytes(), 0o644); err != nil {
+		log.Fatal(err)
+	}
+	// Output:
+	// width: 300 height: 60
+}
+
 func Example_distort() {
 	img, err := resvg.Render(svgData, resvg.WithWidth(200), resvg.WithHeight(700))
 	if err != nil {
@@ -120,4 +149,9 @@ var svgData = []byte(`<?xml version="1.0" encoding="iso-8859-1"?>
 <svg width="400" height="180" xmlns="http://www.w3.org/2000/svg" version="1.1">
   <rect x="50" y="20" width="150" height="150" style="fill:blue;stroke:pink;stroke-width:5;fill-opacity:0.1;stroke-opacity:0.9" />
   Sorry, your browser does not support inline SVG.
+</svg>`)
+
+var svgDataText = []byte(`<?xml version="1.0" encoding="iso-8859-1"?>
+<svg width="300" height="60" xmlns="http://www.w3.org/2000/svg" version="1.1">
+  <text x="10" y="40" font-family="sans-serif" font-size="24">Hello, resvg!</text>
 </svg>`)
