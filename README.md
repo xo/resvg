@@ -3,10 +3,11 @@
 `resvg` is a wrapper around [rust's resvg c-api crate][resvg], used by
 [`usql`][usql] to render SVGs. Useful for rendering SVGs.
 
-[Overview][] | [Building Artifacts][] | [TODO][] | [About][]
+[Overview][] | [Building Artifacts][] | [Documents][] | [TODO][] | [About][]
 
 [Overview]: #overview "Overview"
 [Building Artifacts]: #building-artifacts "Building Artifacts"
+[Documents]: #documents "Documents"
 [TODO]: #todo "TODO"
 [About]: #about "About"
 
@@ -168,6 +169,19 @@ $ RUSTFLAGS="--print=native-static-libs" cargo build --release
 ```
 
 Use
+
+## Documents
+
+- [AGENTS.md](AGENTS.md) holds the rules for a coding agent: the layout, the
+  conventions and the commands that test the code. `CLAUDE.md` imports it.
+- [CONTRIBUTING.md](CONTRIBUTING.md) is for a person who changes the
+  project, and says how to install the agent skills.
+- [docs/PLAN.md](docs/PLAN.md) holds the plan, every decision, and the open
+  questions.
+- [docs/BACKLOG.md](docs/BACKLOG.md) holds the work that is known and not
+  done.
+- [libresvg/README.md](libresvg/README.md) says why each platform archive is a
+  module of its own, and how to release one.
 
 ## TODO
 

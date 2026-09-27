@@ -3,3 +3,4 @@
 *.rgba
 *.txt
 *.svg.png
+.claude/settings.local.json
