@@ -38,7 +38,7 @@ visualizations.
 
 ## Current state
 
-The latest release is v0.11.0, at commit 1b38dcf. It links resvg v0.48.1.
+The latest release is v0.12.1. It links resvg v0.48.1.
 On 2026-10-14, v0.48.1 was still the latest upstream resvg release and the
 latest upstream tag. It is also the version of the `c-api` crate on the
 upstream `main` branch. There was nothing to update.
@@ -46,7 +46,7 @@ upstream `main` branch. There was nothing to update.
 The package builds for ten targets: `darwin_amd64`, `darwin_arm64`,
 `freebsd_amd64`, `linux_amd64`, `linux_amd64_musl`, `linux_arm`,
 `linux_arm64`, `linux_arm64_musl`, `windows_amd64` and `windows_arm64`.
-Three of them are new and are not in v0.11.0: `freebsd_amd64`,
+Three of them are new in v0.12.0: `freebsd_amd64`,
 `linux_arm64_musl` and `windows_arm64` (D16). Each archive is in a module of
 its own under `libresvg/`, tagged `libresvg/<target>/v0.48.1` (D8, D9). A linux/amd64 build of `usql`
 downloads 11 MiB of module zips for `resvg`, against 184 MiB before the
