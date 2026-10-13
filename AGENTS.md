@@ -72,8 +72,9 @@ repository names that repository, such as dbmeta D110.
 - `testdata/` holds the SVG files that `TestRender` renders, and
   `testdata/fonts/DejaVuSans.ttf`, the font that the tests load.
 
-There are seven targets: `darwin_amd64`, `darwin_arm64`, `linux_amd64`,
-`linux_amd64_musl`, `linux_arm`, `linux_arm64` and `windows_amd64`. The
+There are ten targets: `darwin_amd64`, `darwin_arm64`, `freebsd_amd64`,
+`linux_amd64`, `linux_amd64_musl`, `linux_arm`, `linux_arm64`,
+`linux_arm64_musl`, `windows_amd64` and `windows_arm64`. The
 `TARGETS` map in `gen.sh` is the list.
 
 ## Generated files
@@ -91,13 +92,14 @@ CI runs the same command and fails when `git diff` shows a change in `go.mod`,
 `libresvg` or `link_*.go`.
 
 `gen.sh` without `-m` clones resvg into `$HOME/src/charts` and builds every
-archive in a container with `cross`. Do not run it unless Ken asks for a new
-build.
+archive in a container with `cross`. It builds `freebsd_amd64` and
+`windows_arm64` with `cargo zigbuild` instead. Do not run it unless Ken asks
+for a new build.
 
 The `require` block in the root `go.mod` is written by hand. The `replace`
 block overrides it in this repository, so no build here and no CI job can
-find a wrong version in it. The `linux_amd64_musl` line must stay, because
-`go mod tidy` does not find a module that only a custom build tag selects.
+find a wrong version in it. The `linux_amd64_musl` and `linux_arm64_musl`
+lines must stay, because `go mod tidy` does not find a module that only a custom build tag selects.
 See D9 and D13.
 
 ## Go conventions

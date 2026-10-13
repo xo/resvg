@@ -112,8 +112,16 @@ jobs:
           retention-days: 7
 
   test-musl:
-    name: test / linux_amd64 (musl)
-    runs-on: ubuntu-latest
+    name: test / linux_${{ matrix.arch }} (musl)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: amd64
+          - os: ubuntu-26.04-arm
+            arch: arm64
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
@@ -130,7 +138,7 @@ jobs:
             set -e
             apk add --no-cache gcc musl-dev libunwind-dev curl
             gover=$(curl -fsSL https://go.dev/VERSION?m=text | head -1)
-            curl -fsSL "https://go.dev/dl/${gover}.linux-amd64.tar.gz" -o /tmp/go.tgz
+            curl -fsSL "https://go.dev/dl/${gover}.linux-${{ matrix.arch }}.tar.gz" -o /tmp/go.tgz
             tar -C /usr/local -xzf /tmp/go.tgz
             export PATH=/usr/local/go/bin:$PATH
             cp -r /repo /tmp/resvg

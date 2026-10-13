@@ -60,21 +60,40 @@ this.
 Source: `libresvg/README.md`, "An unsupported platform still fails at the
 linker, not before it".
 
-### musl on linux/arm64 is not built
+### freebsd_amd64 and windows_arm64 have never run
 
-Only `linux/amd64` has a musl target. Alpine on ARM needs `linux/arm64` musl.
+The archives build and link into a Go test binary with `zig cc`, and nobody ran
+either binary. No FreeBSD or Windows ARM machine was available. Run
+`go test` on a FreeBSD host and on Windows ARM. The FreeBSD library list in
+`gen.sh` comes from `rustc` and is untested on a real host.
 
-Source: `libresvg/README.md`, under musl, and D13.
+Source: D16 and `libresvg/README.md`.
 
-### The dropped targets
+### windows_arm64 and freebsd_amd64 are not in CI
 
-`freebsd_amd64`, `netbsd_amd64` and `windows_arm64` were dropped on
-2024-02-04, because their builds failed. `solaris_amd64` was dropped on
-2024-04-06. `dragonfly_amd64` and `openbsd_amd64` never had a Rust target in
-`gen.sh`. All six are comments in the `TARGETS` map of `gen.sh`.
+GitHub has a `windows-11-arm` runner that can test `windows_arm64`. It needs a
+clang based C compiler and no `-race`. FreeBSD has no hosted runner. A job with
+a FreeBSD VM action can test `freebsd_amd64`.
 
-Source: `gen.sh`, commits 76ec2fe and 667bd90, and D1. This is open question
-3 in [PLAN.md](PLAN.md).
+Source: D16.
+
+### The ZIGBUILD targets need cargo-zigbuild and zig
+
+`gen.sh` needs `cargo install cargo-zigbuild` and `zig` for two targets, and
+the README does not list them as requirements for building the archives.
+
+Source: found while adding D16.
+
+### Targets with no decision
+
+`linux_riscv64`, `linux_ppc64le` and `linux_s390x` were never tried, and the
+models disagreed on them. `netbsd_amd64` and `solaris_amd64` were dropped for
+failed builds, and the models said to skip them. `dragonfly_amd64` and
+`openbsd_amd64` never had a Rust target in `gen.sh`. They are comments in the
+`TARGETS` map of `gen.sh`.
+
+Source: `gen.sh`, commits 76ec2fe and 667bd90, D1 and D16. This is open
+question 3 in [PLAN.md](PLAN.md).
 
 ### Nix is not tested
 

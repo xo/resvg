@@ -81,10 +81,22 @@ $ go build -ldflags '-extldflags "-static"'
 Otherwise, the `resvg.dll` (not included) will need to be located next to the
 built Go binary, or in the Windows system path.
 
+The `windows/arm64` archive is built for the `aarch64-pc-windows-gnullvm`
+target. Build with a clang based C compiler, such as
+[llvm-mingw](https://github.com/mstorsjo/llvm-mingw), because the archive needs
+`libunwind`.
+
+### Using on FreeBSD
+
+The `freebsd/amd64` archive links the FreeBSD base libraries `libexecinfo`,
+`libkvm`, `libmemstat`, `libprocstat`, `libdevstat` and `libgcc_s`. All of
+them ship with FreeBSD. Nobody has run the package on FreeBSD yet. See
+[docs/BACKLOG.md](docs/BACKLOG.md).
+
 ### Using on Alpine (musl)
 
-Pass `-tags musl` when building for `linux/amd64` on a musl-based
-distribution such as Alpine, and have `libunwind-dev` (or your
+Pass `-tags musl` when building for `linux/amd64` or `linux/arm64` on a
+musl-based distribution such as Alpine, and have `libunwind-dev` (or your
 distribution's equivalent) installed at link time:
 
 ```sh

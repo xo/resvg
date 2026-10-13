@@ -11,11 +11,14 @@ libresvg/
   darwin_amd64/lib.go       generated: the #cgo LDFLAGS for this target
   darwin_amd64/libresvg.a
   darwin_arm64/...
+  freebsd_amd64/...
   linux_amd64/...
   linux_amd64_musl/...      opt-in via `go build -tags musl`, see below
   linux_arm64/...
+  linux_arm64_musl/...      opt-in via `go build -tags musl`, see below
   linux_arm/...
   windows_amd64/...
+  windows_arm64/...
 ```
 
 Everything here is produced by `../gen.sh`.
@@ -29,8 +32,8 @@ package fails to build for everyone downstream.
 
 ## Why each platform is its own module
 
-The original six targets come to ~184 MiB (linux_amd64_musl, added later, is
-opt-in and not part of that count -- see below). Shipping them all in the
+The original six targets come to ~184 MiB (the targets added later, such as
+linux_amd64_musl, are not part of that count). Shipping them all in the
 root module means every consumer downloads all six just to link one.
 
 Splitting fixes that: each target gets its own `go.mod`, and the root module
@@ -48,6 +51,9 @@ Measured on disk:
 | darwin_arm64 | 27.1 MiB |
 | linux_amd64 | 36.7 MiB |
 | linux_amd64_musl | 36.8 MiB |
+| linux_arm64_musl | 37.2 MiB |
+| freebsd_amd64 | 37.2 MiB |
+| windows_arm64 | 33.4 MiB |
 | linux_arm64 | 37.1 MiB |
 | linux_arm | 33.1 MiB |
 | windows_amd64 | 19.4 MiB |
@@ -106,9 +112,30 @@ archive with undefined `atan2`/`cos`/`sin`/etc. regardless of what's listed
 in `SYSTEM_LIBS`, because it's the wrong libc to link musl-targeted object
 code against in the first place, not a missing flag.
 
-Only `linux/amd64` is covered for musl today; `linux/arm64` musl (relevant
-to Alpine on ARM) isn't built, same as the gap in CI coverage for
-`linux_arm`.
+`linux_arm64_musl` works the same way for Alpine on ARM. It is built for
+`aarch64-unknown-linux-musl`, it needs `libunwind-dev` at link time, and the
+tag of `linux_arm64` is `linux && arm64 && !musl`. It was tested in an arm64
+Alpine 3.20 container, and CI runs the same job on an arm64 runner.
+
+## freebsd_amd64 and windows_arm64
+
+`cross` cannot build these two. Its FreeBSD image has a glibc that is too old
+to run the build scripts of the `libc` and `crc32fast` crates, and it has no
+image for any Windows ARM target. `gen.sh` builds them with `cargo zigbuild`
+instead, which needs `cargo install cargo-zigbuild` and `zig` on the `PATH`.
+The `ZIGBUILD` map in `gen.sh` names them.
+
+`windows_arm64` is built for `aarch64-pc-windows-gnullvm`. `aarch64-pc-windows-msvc`
+needs Visual Studio, and a Linux host does not have it.
+
+Both archives link into a Go test binary with `zig cc` as the C compiler
+(`zig cc -target aarch64-windows-gnu` and `zig cc -target x86_64-freebsd`). The
+test binaries were not run, because no Windows ARM or FreeBSD machine was
+available. The system libraries in `SYSTEM_LIBS` are the ones that `rustc`
+printed for each target. Zig does not ship `libgcc_s`, `libkvm`, `libmemstat`,
+`libprocstat`, `libdevstat` or `libexecinfo` for FreeBSD, so the zig link test
+used `-lunwind` and no FreeBSD base libraries, and a real FreeBSD host links
+the committed list.
 
 ## Directory names are interface
 

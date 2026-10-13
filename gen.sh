@@ -49,34 +49,52 @@ git_checkout_reset() {
 declare -A TARGETS=(
   [darwin_amd64]=x86_64-apple-darwin
   [darwin_arm64]=aarch64-apple-darwin
+  [freebsd_amd64]=x86_64-unknown-freebsd
   [linux_amd64]=x86_64-unknown-linux-gnu
   [linux_amd64_musl]=x86_64-unknown-linux-musl
   [linux_arm64]=aarch64-unknown-linux-gnu
+  [linux_arm64_musl]=aarch64-unknown-linux-musl
   [linux_arm]=armv7-unknown-linux-gnueabihf
   [windows_amd64]=x86_64-pc-windows-gnu
+  [windows_arm64]=aarch64-pc-windows-gnullvm
+)
+
+# Targets that cross has no working image for are built with cargo-zigbuild
+# (cargo install cargo-zigbuild, and zig on the PATH) instead.
+#
+# freebsd_amd64: the cross image has an old glibc, and the build scripts of
+# crates such as libc and crc32fast need a newer one, so they cannot run.
+#
+# windows_arm64: cross has no image for aarch64-pc-windows-msvc, which needs
+# Visual Studio, or for aarch64-pc-windows-gnullvm, which needs a clang
+# toolchain. zig supplies the linker for both.
+declare -A ZIGBUILD=(
+  [freebsd_amd64]=1
+  [windows_arm64]=1
 )
 
 #[dragonfly_amd64]=
-#[freebsd_amd64]=x86_64-unknown-freebsd
 #[netbsd_amd64]=x86_64-unknown-netbsd
 #[openbsd_amd64]=
 #[solaris_amd64]=x86_64-pc-solaris
-#[windows_arm64]=aarch64-pc-windows-msvc
 
 # //go:build constraint for each target, used in the generated lib.go and
 # link_*.go files. musl isn't a GOOS/GOARCH the go command can select on its
 # own -- linux/amd64 covers both glibc and musl hosts identically -- so
 # linux_amd64_musl is opt-in via a manual `musl` build tag
-# (`go build -tags musl`), and linux_amd64's own tag excludes it so the two
-# never both match the same build.
+# (`go build -tags musl`), and the glibc tags of linux_amd64 and linux_arm64
+# exclude it so the two never both match the same build.
 declare -A GO_BUILD_TAG=(
   [darwin_amd64]="darwin && amd64"
   [darwin_arm64]="darwin && arm64"
+  [freebsd_amd64]="freebsd && amd64"
   [linux_amd64]="linux && amd64 && !musl"
   [linux_amd64_musl]="linux && amd64 && musl"
-  [linux_arm64]="linux && arm64"
+  [linux_arm64]="linux && arm64 && !musl"
+  [linux_arm64_musl]="linux && arm64 && musl"
   [linux_arm]="linux && arm"
   [windows_amd64]="windows && amd64"
+  [windows_arm64]="windows && arm64"
 )
 
 # System libraries each target needs on top of libresvg.a itself, emitted
@@ -84,6 +102,7 @@ declare -A GO_BUILD_TAG=(
 declare -A SYSTEM_LIBS=(
   [darwin_amd64]="-lresvg -lm"
   [darwin_arm64]="-lresvg -lm"
+  [freebsd_amd64]="-lresvg -lrt -lutil -lexecinfo -lkvm -lmemstat -lprocstat -ldevstat -lpthread -lgcc_s -lc -lm"
   [linux_amd64]="-lresvg -lm"
   # No -lm: musl folds libm into libc, and rustc's own
   # --print=native-static-libs for this target reports only these two.
@@ -91,8 +110,10 @@ declare -A SYSTEM_LIBS=(
   # needs the libunwind-dev package (or equivalent) at link time.
   [linux_amd64_musl]="-lresvg -lunwind -lc"
   [linux_arm64]="-lresvg -lm"
+  [linux_arm64_musl]="-lresvg -lunwind -lc"
   [linux_arm]="-lresvg -lm"
   [windows_amd64]="-lresvg -lm -lkernel32 -ladvapi32 -lbcrypt -lntdll -luserenv -lws2_32"
+  [windows_arm64]="-lresvg -lm -lkernel32 -lntdll -luserenv -lws2_32 -ldbghelp -lunwind"
 )
 
 # Each target ships as its own Go module nested under libresvg/, so a
@@ -194,10 +215,17 @@ for TARGET in $BUILD_TARGETS; do
   (
     export "CARGO_TARGET_$(sed -e 's/-/_/g' <<< "$RUST_TARGET"|tr [:lower:] [:upper:])_RUSTFLAGS"="--print=native-static-libs"
     set -x
-    cross build \
-      --verbose \
-      --release \
-      --target $RUST_TARGET
+    if [ -n "${ZIGBUILD[$TARGET]}" ]; then
+      cargo zigbuild \
+        --verbose \
+        --release \
+        --target $RUST_TARGET
+    else
+      cross build \
+        --verbose \
+        --release \
+        --target $RUST_TARGET
+    fi
     cp $WORKDIR/resvg/target/$RUST_TARGET/release/libresvg.a $DEST/libresvg.a
     chmod -x $DEST/libresvg.a
   )

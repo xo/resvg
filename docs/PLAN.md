@@ -11,7 +11,7 @@ title and its status.
 
 | Decision | Title | Status |
 | --- | --- | --- |
-| [D1](#d1-the-package-links-a-prebuilt-resvg-archive-that-the-repository-holds-decided) | The package links a prebuilt resvg archive that the repository holds | Decided |
+| [D1](#d1-the-package-links-a-prebuilt-resvg-archive-that-the-repository-holds-decided-amended-by-d16) | The package links a prebuilt resvg archive that the repository holds | Decided, amended by D16 |
 | [D2](#d2-versiontxt-names-the-resvg-release-and-a-test-compares-it-with-the-header-decided) | version.txt names the resvg release, and a test compares it with the header | Decided |
 | [D3](#d3-options-passed-to-new-set-the-configuration-and-it-does-not-change-after-new-decided) | Options passed to New set the configuration, and it does not change after New | Decided |
 | [D4](#d4-a-width-a-height-and-a-scale-mode-set-the-size-of-the-image-decided) | A width, a height and a scale mode set the size of the image | Decided |
@@ -26,6 +26,7 @@ title and its status.
 | [D13](#d13-musl-is-a-separate-target-that-the-musl-build-tag-selects-decided-amends-d8) | musl is a separate target that the musl build tag selects | Decided, amends D8 |
 | [D14](#d14-libresvgreadmemd-stays-beside-the-archives-proposed) | libresvg/README.md stays beside the archives | Proposed |
 | [D15](#d15-resvg-is-set-up-for-coding-agents-as-every-xo-repository-is-decided) | resvg is set up for coding agents as every xo repository is | Decided |
+| [D16](#d16-three-more-targets-linux_arm64_musl-windows_arm64-and-freebsd_amd64-decided-amends-d1) | Three more targets: linux_arm64_musl, windows_arm64 and freebsd_amd64 | Decided, amends D1 |
 
 ## Purpose
 
@@ -38,17 +39,24 @@ visualizations.
 ## Current state
 
 The latest release is v0.11.0, at commit 1b38dcf. It links resvg v0.48.1.
+On 2026-10-14, v0.48.1 was still the latest upstream resvg release and the
+latest upstream tag. It is also the version of the `c-api` crate on the
+upstream `main` branch. There was nothing to update.
 
-The package builds for seven targets: `darwin_amd64`, `darwin_arm64`,
-`linux_amd64`, `linux_amd64_musl`, `linux_arm`, `linux_arm64` and
-`windows_amd64`. Each archive is in a module of its own under `libresvg/`,
-tagged `libresvg/<target>/v0.48.1` (D8, D9). A linux/amd64 build of `usql`
+The package builds for ten targets: `darwin_amd64`, `darwin_arm64`,
+`freebsd_amd64`, `linux_amd64`, `linux_amd64_musl`, `linux_arm`,
+`linux_arm64`, `linux_arm64_musl`, `windows_amd64` and `windows_arm64`.
+Three of them are new and are not in v0.11.0: `freebsd_amd64`,
+`linux_arm64_musl` and `windows_arm64` (D16). Each archive is in a module of
+its own under `libresvg/`, tagged `libresvg/<target>/v0.48.1` (D8, D9). A linux/amd64 build of `usql`
 downloads 11 MiB of module zips for `resvg`, against 184 MiB before the
 split.
 
 CI runs the tests on linux/amd64, linux/arm64, macOS on Apple silicon and
-Windows, and in an Alpine container for musl (D11, D13). It does not run
-`linux_arm` or `darwin_amd64`, because GitHub has no runner for either.
+Windows, and in an Alpine container for musl on amd64 and arm64 (D11, D13,
+D16). It does not run `linux_arm` or `darwin_amd64`, because GitHub has no
+runner for either. It does not run `freebsd_amd64` or `windows_arm64` either
+(D16).
 
 The two issues that were ever opened, #1 and #2, are closed. There are no
 open pull requests.
@@ -73,7 +81,7 @@ decision that changes an earlier one says so in its status, and the earlier
 one says so too. Decisions D1 to D13 were rebuilt from the git history and the
 code on 2026-09-27, and each one names the commits that it comes from.
 
-### D1. The package links a prebuilt resvg archive that the repository holds. Decided.
+### D1. The package links a prebuilt resvg archive that the repository holds. Decided, amended by D16.
 
 The package does not build resvg. The first commit, f3672c3 on 2024-01-13,
 committed one archive, `libresvg/libresvg.a`. Commit 0794e91 moved it to
@@ -294,6 +302,32 @@ Markdown file in the root. `TestThePlanIndexIsComplete` and
 `TestAnAmendmentPointsBothWays` hold the index and the amendments of this
 file. The tests use only the standard library.
 
+### D16. Three more targets: linux_arm64_musl, windows_arm64 and freebsd_amd64. Decided, amends D1.
+
+On 2026-10-14 Ken asked for the targets that Gemini Pro and DeepSeek Pro
+recommended, and they are the three in the title. Both models also said to skip
+`netbsd_amd64`, `solaris_amd64`, the 32-bit targets, Android, iOS and wasm.
+They disagreed on `linux_riscv64`, `linux_ppc64le` and `linux_s390x`, and
+nobody decided those. D1 said that three targets were dropped because their
+builds failed. This decision brings two of them back, `freebsd_amd64` and
+`windows_arm64`.
+
+`linux_arm64_musl` is built for `aarch64-unknown-linux-musl` with `cross`. It
+follows D13: the `musl` tag selects it, and the tag of `linux_arm64` became
+`linux && arm64 && !musl`. It was tested in an arm64 Alpine 3.20 container. The
+CI job for musl now runs on an amd64 and an arm64 runner.
+
+`cross` cannot build the other two. The `cross` image for FreeBSD has a glibc
+that is too old to run build scripts, and `cross` has no image for a Windows
+ARM target. `gen.sh` builds both with `cargo zigbuild` and the `zig` on the
+`PATH`, and the `ZIGBUILD` map in `gen.sh` names them. `windows_arm64` uses
+`aarch64-pc-windows-gnullvm`, because the `msvc` target needs Visual Studio.
+
+Both archives link into a Go test binary with `zig cc`. Nobody ran either
+binary, because no FreeBSD or Windows ARM machine was available, and the
+decision to start no virtual machine for this work stands. CI does not cover
+them. `libresvg/README.md` has the details and the BACKLOG lists the gaps.
+
 ## Open questions for Ken
 
 1. Is "Rewrite as pure Go" still the direction? If it is, it needs a
@@ -301,9 +335,9 @@ file. The tests use only the standard library.
    can go.
 2. Does `libresvg/README.md` stay in `libresvg/`, or does it move to
    `docs/`? D14 keeps it where it is, and it is Proposed.
-3. Do any of the dropped targets come back? They are `freebsd_amd64`,
-   `netbsd_amd64`, `solaris_amd64` and `windows_arm64` (D1), and musl on
-   linux/arm64 (D13), which Alpine on ARM needs.
+3. Do `linux_riscv64`, `linux_ppc64le` and `linux_s390x` come? DeepSeek Pro
+   ranked `linux_riscv64` second and named the other two. Gemini Pro said to
+   wait for a request. D16 holds the rest of the advice.
 4. Does the repository get a `.golangci.yml` and a lint job in CI? Other xo
    repositories have both. This one has neither.
 5. Can the `master` branch on GitHub go? It stops at 10768cd, 18 commits
