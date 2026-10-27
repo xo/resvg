@@ -72,7 +72,9 @@ Source: D16 and `libresvg/README.md`.
 ### windows_arm64 and freebsd_amd64 are not in CI
 
 GitHub has a `windows-11-arm` runner that can test `windows_arm64`. It needs a
-clang based C compiler and no `-race`. FreeBSD has no hosted runner. A job with
+clang based C compiler and no `-race`. The `magic` project found on
+2026-10-14 that native arm64 `zig` 0.16.0 crashed on that runner while cgo built
+`runtime/cgo`, and that llvm-mingw 20261006 worked as the C compiler. FreeBSD has no hosted runner. A job with
 a FreeBSD VM action can test `freebsd_amd64`.
 
 Source: D16.

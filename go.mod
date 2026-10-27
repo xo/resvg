@@ -15,22 +15,22 @@ go 1.25
 // independent version of its own -- there is exactly one version number to
 // track, not two.
 require (
-	github.com/xo/resvg/libresvg/darwin_amd64 v0.48.1
-	github.com/xo/resvg/libresvg/darwin_arm64 v0.48.1
-	github.com/xo/resvg/libresvg/freebsd_amd64 v0.48.1
-	github.com/xo/resvg/libresvg/linux_amd64 v0.48.1
+	github.com/xo/resvg/libresvg/darwin_amd64 v0.49.0
+	github.com/xo/resvg/libresvg/darwin_arm64 v0.49.0
+	github.com/xo/resvg/libresvg/freebsd_amd64 v0.49.0
+	github.com/xo/resvg/libresvg/linux_amd64 v0.49.0
 	// linux_amd64_musl is gated behind a manual `musl` build tag, not a
 	// GOOS/GOARCH pair go mod tidy enumerates on its own, so it has to be
 	// kept here by hand -- tidy won't discover or re-add it itself. See
 	// "musl (Alpine, static linux)" in libresvg/README.md.
-	github.com/xo/resvg/libresvg/linux_amd64_musl v0.48.1
-	github.com/xo/resvg/libresvg/linux_arm v0.48.1
-	github.com/xo/resvg/libresvg/linux_arm64 v0.48.1
+	github.com/xo/resvg/libresvg/linux_amd64_musl v0.49.0
+	github.com/xo/resvg/libresvg/linux_arm v0.49.0
+	github.com/xo/resvg/libresvg/linux_arm64 v0.49.0
 	// linux_arm64_musl is gated behind the manual `musl` build tag, like
 	// linux_amd64_musl above, so it is kept here by hand as well.
-	github.com/xo/resvg/libresvg/linux_arm64_musl v0.48.1
-	github.com/xo/resvg/libresvg/windows_amd64 v0.48.1
-	github.com/xo/resvg/libresvg/windows_arm64 v0.48.1
+	github.com/xo/resvg/libresvg/linux_arm64_musl v0.49.0
+	github.com/xo/resvg/libresvg/windows_amd64 v0.49.0
+	github.com/xo/resvg/libresvg/windows_arm64 v0.49.0
 )
 
 // Local development only, and inert for anyone who depends on this module:

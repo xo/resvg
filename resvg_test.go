@@ -277,3 +277,23 @@ func cleanString(s string) string {
 //
 //go:embed version.txt
 var versionTxt []byte
+
+// TestErrNoText makes sure that every error code of the resvg C API has its
+// own message. A code that the C library adds will fail here, because cgo is
+// not allowed in a test file, so the test reads the codes as numbers.
+func TestErrNoText(t *testing.T) {
+	seen := make(map[string]ErrNo)
+	for err := ErrNo(0); err <= 7; err++ {
+		s := err.Error()
+		if strings.Contains(s, "unknown error") {
+			t.Errorf("expected a message for code %d, got: %q", int(err), s)
+		}
+		if other, ok := seen[s]; ok {
+			t.Errorf("expected codes %d and %d to differ, both are: %q", int(other), int(err), s)
+		}
+		seen[s] = err
+	}
+	if s := ErrNo(8).Error(); !strings.Contains(s, "unknown error") {
+		t.Errorf("expected code 8 to be unknown, got: %q", s)
+	}
+}

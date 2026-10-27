@@ -534,6 +534,8 @@ func (err ErrNo) Error() string {
 		return "resvg: ok"
 	case C.RESVG_ERROR_NOT_AN_UTF8_STR:
 		return "resvg: not a utf8 string"
+	case C.RESVG_ERROR_SVGZ_UNSUPPORTED:
+		return "resvg: svgz decoding unsupported"
 	case C.RESVG_ERROR_FILE_OPEN_FAILED:
 		return "resvg: file open failed"
 	case C.RESVG_ERROR_MALFORMED_GZIP:

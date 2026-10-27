@@ -166,7 +166,7 @@ of a build.
 Nested modules are tagged with a path prefix, and the root module's
 `require` block has to name versions that already exist. So the order is:
 
-1. Tag each platform module: `libresvg/darwin_amd64/v0.48.1`, and so on,
+1. Tag each platform module: `libresvg/darwin_amd64/v0.49.0`, and so on,
    using the version from `version.txt`.
 2. Push those tags and let the proxy see them.
 3. Update the `require` block in the root `go.mod` to match.

@@ -22,8 +22,11 @@ done
 
 mkdir -p $WORKDIR
 
+# git_latest_tag prints the newest release tag of the repository. It sorts the
+# tags by version, because "git describe" only names the tag of the commit that
+# is checked out, so it never moves to a newer release.
 git_latest_tag() {
-  git -C "$1" describe --abbrev=0 --tags
+  git -C "$1" tag --list 'v[0-9]*' --sort=-v:refname | head -n 1
 }
 
 git_checkout_reset() {
