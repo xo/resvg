@@ -1,14 +1,18 @@
 # resvg
 
+> This project is no longer under active development. Use
+> [`github.com/xo/okage/svg`][okage] instead. It is a Go port of resvg and of
+> the components that resvg needs, so it has no cgo and no prebuilt archives.
+> This repository stays up so that existing programs keep building.
+
 `resvg` is a wrapper around [rust's resvg c-api crate][resvg], used by
 [`usql`][usql] to render SVGs. Useful for rendering SVGs.
 
-[Overview][] | [Building Artifacts][] | [Documents][] | [TODO][] | [About][]
+[Overview][] | [Building Artifacts][] | [Documents][] | [About][]
 
 [Overview]: #overview "Overview"
 [Building Artifacts]: #building-artifacts "Building Artifacts"
 [Documents]: #documents "Documents"
-[TODO]: #todo "TODO"
 [About]: #about "About"
 
 [![Unit Tests][resvg-ci-status]][resvg-ci]
@@ -195,10 +199,6 @@ Use
 - [libresvg/README.md](libresvg/README.md) says why each platform archive is a
   module of its own, and how to release one.
 
-## TODO
-
-- Rewrite as pure Go
-
 ## About
 
 `resvg` was written primarily to support these projects:
@@ -207,5 +207,6 @@ Use
 - [usql][usql] - a universal command-line interface for SQL databases
 
 [resvg]: https://github.com/linebender/resvg
+[okage]: https://github.com/xo/okage/tree/main/svg
 [usql]: https://github.com/xo/usql
 [vegagoja]: https://github.com/xo/vegagoja

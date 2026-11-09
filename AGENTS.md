@@ -1,5 +1,9 @@
 # resvg
 
+This project is no longer under active development (D17).
+`github.com/xo/okage/svg` replaces it. Do not start new work here unless Ken
+asks for it.
+
 `resvg` is a Go package that renders an SVG as an `image.RGBA`. It wraps the C
 API of the Rust [resvg](https://github.com/linebender/resvg) crate through cgo.
 `usql` uses it to render charts, and `vegagoja` uses it to render Vega

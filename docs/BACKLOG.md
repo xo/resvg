@@ -1,5 +1,9 @@
 # Backlog
 
+Development of this project stopped on 2026-11-10 (D17 in [PLAN.md](PLAN.md)),
+so this list is frozen. `github.com/xo/okage/svg` replaces the package, and
+the pure Go rewrite that this file used to list is that project.
+
 This file holds the work that is known and not done. Each item names where it
 came from. When an item is done, delete it, and record anything that was
 decided in [PLAN.md](PLAN.md).
@@ -139,13 +143,6 @@ all of it. The CI workflow still runs on a push to `master`.
 Source: `git branch -r`. This is open question 5 in [PLAN.md](PLAN.md).
 
 ## Code
-
-### A pure Go rewrite
-
-The TODO section of `README.md` says "Rewrite as pure Go". Nothing started it.
-
-Source: `README.md`, commit 8eb2d69. This is open question 1 in
-[PLAN.md](PLAN.md).
 
 ### The background fill sets one pixel at a time
 

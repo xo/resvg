@@ -27,6 +27,7 @@ title and its status.
 | [D14](#d14-libresvgreadmemd-stays-beside-the-archives-proposed) | libresvg/README.md stays beside the archives | Proposed |
 | [D15](#d15-resvg-is-set-up-for-coding-agents-as-every-xo-repository-is-decided) | resvg is set up for coding agents as every xo repository is | Decided |
 | [D16](#d16-three-more-targets-linux_arm64_musl-windows_arm64-and-freebsd_amd64-decided-amends-d1) | Three more targets: linux_arm64_musl, windows_arm64 and freebsd_amd64 | Decided, amends D1 |
+| [D17](#d17-resvg-is-no-longer-under-active-development-decided) | resvg is no longer under active development | Decided |
 
 ## Purpose
 
@@ -67,14 +68,11 @@ open pull requests.
 
 ## Direction
 
-The TODO in `README.md` says "Rewrite as pure Go". Ken wrote it on
-2024-01-18, in commit 8eb2d69. Nothing in the history started that work, and
-no decision holds it. It is the first open question below.
-
-Until then, the work is to follow each resvg release: build the archives with
-`gen.sh`, tag the platform modules, and tag the root module. The steps are in
-`libresvg/README.md`, under Releasing. The work that is known and not done is
-in [BACKLOG.md](BACKLOG.md).
+This project is no longer under active development (D17). `github.com/xo/okage/svg`
+replaces it. The repository stays up so that programs that use it keep
+building. It still follows the upstream resvg releases until Ken says that it
+does not, and the steps are in `libresvg/README.md`, under Releasing. The work
+that is known and not done is in [BACKLOG.md](BACKLOG.md), and it is frozen.
 
 ## Decisions
 
@@ -332,17 +330,32 @@ binary, because no FreeBSD or Windows ARM machine was available, and the
 decision to start no virtual machine for this work stands. CI does not cover
 them. `libresvg/README.md` has the details and the BACKLOG lists the gaps.
 
+### D17. resvg is no longer under active development. Decided.
+
+Ken decided on 2026-11-10 that this project is no longer under active
+development. `github.com/xo/okage/svg` replaces it. It is a Go port of resvg
+and of the components that resvg needs, written in pure Go, so it has no cgo
+and no prebuilt archives.
+
+`README.md` now says this at the top and points to `okage`. The TODO section,
+"Rewrite as pure Go", is gone, because `okage` is that rewrite. Nothing else
+changed. The code, the archives and the tags stay, so programs that use
+v0.13.0 keep building.
+
+Ken did not say whether this repository still follows new upstream resvg
+releases, or whether it is archived on GitHub. Both are open questions below.
+
 ## Open questions for Ken
 
-1. Is "Rewrite as pure Go" still the direction? If it is, it needs a
-   decision and a first step. If it is not, the TODO section of `README.md`
-   can go.
+1. Does this repository still follow new upstream resvg releases, and does
+   it get archived on GitHub? D17 says only that development stopped.
 2. Does `libresvg/README.md` stay in `libresvg/`, or does it move to
    `docs/`? D14 keeps it where it is, and it is Proposed.
 3. Do `linux_riscv64`, `linux_ppc64le` and `linux_s390x` come? DeepSeek Pro
    ranked `linux_riscv64` second and named the other two. Gemini Pro said to
-   wait for a request. D16 holds the rest of the advice.
+   wait for a request. D16 holds the rest of the advice. D17 makes this
+   unlikely.
 4. Does the repository get a `.golangci.yml` and a lint job in CI? Other xo
-   repositories have both. This one has neither.
+   repositories have both. This one has neither. D17 makes this unlikely.
 5. Can the `master` branch on GitHub go? It stops at 10768cd, 18 commits
    behind `main`, and `main` holds all of it.
